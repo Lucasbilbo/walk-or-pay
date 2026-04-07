@@ -9,11 +9,20 @@ export default function ConnectFitness() {
     setLoading(true)
     setError(null)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Not authenticated')
+      let { data: { session }, error } = await supabase.auth.getSession()
+      console.log('Session:', session, 'Error:', error)
 
+      if (!session) {
+        // Fallback: refresh session in case it wasn't loaded yet
+        const { data: refreshed } = await supabase.auth.refreshSession()
+        console.log('Refreshed:', refreshed)
+        if (!refreshed.session) throw new Error('Not authenticated')
+        session = refreshed.session
+      }
+
+      const token = session.access_token
       const res = await fetch('/.netlify/functions/google-auth-url', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
       if (!res.ok || !data.url) throw new Error(data.error || 'Failed to get auth URL')
@@ -21,6 +30,7 @@ export default function ConnectFitness() {
       // Redirect to Google OAuth — page will not return here
       window.location.href = data.url
     } catch (err) {
+      console.error('Connect error:', err)
       setError(err.message)
       setLoading(false)
     }
