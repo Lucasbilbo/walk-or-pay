@@ -70,6 +70,45 @@ function supabaseUpsert(supabaseUrl, serviceKey, table, body) {
   })
 }
 
+function supabaseGetUser(supabaseUrl, serviceKey, userId) {
+  const hostname = new URL(supabaseUrl).hostname
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname,
+      path: `/auth/v1/admin/users/${encodeURIComponent(userId)}`,
+      method: 'GET',
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+    }, (res) => {
+      let d = ''
+      res.on('data', c => d += c)
+      res.on('end', () => { try { resolve(JSON.parse(d)) } catch { resolve(null) } })
+    })
+    req.on('error', () => resolve(null))
+    req.end()
+  })
+}
+
+function sendEmail(resendApiKey, to, subject, html) {
+  const bodyStr = JSON.stringify({ from: 'Walk or Pay <noreply@walkOrPay.app>', to, subject, html })
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.resend.com', path: '/emails', method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr),
+      },
+    }, (res) => {
+      let d = ''
+      res.on('data', c => d += c)
+      res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }) } catch { reject(new Error('Parse error')) } })
+    })
+    req.on('error', reject)
+    req.write(bodyStr)
+    req.end()
+  })
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' }
@@ -77,6 +116,7 @@ exports.handler = async (event) => {
   const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
   const SUPABASE_URL = process.env.SUPABASE_URL
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const RESEND_API_KEY = process.env.RESEND_API_KEY // optional — email skipped if not set
 
   if (!STRIPE_WEBHOOK_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server misconfigured' }) }
@@ -123,6 +163,31 @@ exports.handler = async (event) => {
           5000
         )
         console.log('[stripe-webhook] Challenge activated:', challengeId)
+
+        // Send confirmation email if Resend is configured
+        if (RESEND_API_KEY) {
+          try {
+            const userData = await withTimeout(supabaseGetUser(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, userId), 5000)
+            const email = userData?.email
+            if (email) {
+              const dailyGoal = pi?.metadata?.daily_goal ? Number(pi.metadata.daily_goal) : null
+              const effectiveCents = pi?.metadata?.effective_amount_cents ? Number(pi.metadata.effective_amount_cents) : null
+              const goalStr = dailyGoal ? dailyGoal.toLocaleString() : 'your'
+              const stakeStr = effectiveCents ? `$${(effectiveCents / 100).toFixed(2)}` : 'your stake'
+              await withTimeout(sendEmail(
+                RESEND_API_KEY,
+                email,
+                'Your Walk or Pay challenge has started! 🚶',
+                `<p>Your 7-day challenge is live. Your daily goal is <strong>${goalStr} steps</strong>.</p>
+                 <p>At stake: <strong>${stakeStr}</strong></p>
+                 <p>Good luck! <a href="https://walkOrPay.netlify.app">View your dashboard</a></p>`
+              ), 5000)
+              console.log('[stripe-webhook] Confirmation email sent to:', email)
+            }
+          } catch (e) {
+            console.error('[stripe-webhook] Email send failed (non-blocking):', e.message)
+          }
+        }
 
         if (welcomeBonusApplied) {
           // Ensure profile row exists and mark bonus as used
