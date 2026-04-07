@@ -32,6 +32,39 @@ function httpsPost(hostname, path, formBody) {
   })
 }
 
+function supabaseUpsertTable(supabaseUrl, serviceKey, table, body) {
+  const hostname = new URL(supabaseUrl).hostname
+  const bodyStr = JSON.stringify(body)
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname,
+      path: `/rest/v1/${table}`,
+      method: 'POST',
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr),
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+    }, (res) => {
+      let d = ''
+      res.on('data', c => d += c)
+      res.on('end', () => {
+        if (res.statusCode >= 300) {
+          console.error(`[google-auth-callback] Supabase upsert ${table} failed, status:`, res.statusCode, 'body:', d)
+          reject(new Error(`Supabase upsert ${table} failed: ${res.statusCode} ${d}`))
+        } else {
+          resolve(res.statusCode)
+        }
+      })
+    })
+    req.on('error', reject)
+    req.write(bodyStr)
+    req.end()
+  })
+}
+
 function supabaseUpsert(supabaseUrl, serviceKey, body) {
   const hostname = new URL(supabaseUrl).hostname
   const bodyStr = JSON.stringify(body)
@@ -128,6 +161,17 @@ exports.handler = async (event) => {
   const { access_token, refresh_token, expires_in } = tokenRes.body
   const expiresAt = new Date(Date.now() + (expires_in || 3600) * 1000).toISOString()
   console.log('[google-auth-callback] Token exchange OK, userId:', userId, 'has_refresh_token:', !!refresh_token)
+
+  // Ensure profile row exists before inserting fitness_tokens (FK constraint)
+  try {
+    await withTimeout(
+      supabaseUpsertTable(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'profiles', { id: userId }),
+      5000
+    )
+  } catch (e) {
+    console.error('[google-auth-callback] Profile upsert error:', e.message)
+    return { statusCode: 302, headers: { Location: `${APP_URL}/?google_error=save_failed` }, body: '' }
+  }
 
   // Save tokens server-side only — NEVER return access_token or refresh_token to client
   try {
