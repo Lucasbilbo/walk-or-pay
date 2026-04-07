@@ -20,6 +20,7 @@ export function useChallenge(userId) {
         .eq('user_id', userId)
         .in('status', ['active', 'pending_payment'])
         .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle()
 
       if (challengeErr) throw challengeErr
