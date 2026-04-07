@@ -47,6 +47,7 @@ export default function ConnectFitness() {
           Your fitness data stays private — we only read step counts.
         </p>
         <button
+          type="button"
           className="btn btn-primary"
           onClick={handleConnect}
           disabled={loading}
