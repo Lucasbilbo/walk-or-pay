@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { supabase } from '../lib/supabase'
 import { calculateEffectiveAmount } from '../lib/challengeLogic'
 
@@ -113,8 +115,10 @@ function StepGraceDay({ graceDays, onChange, onNext, onBack }) {
   )
 }
 
-// ── Step 4: Summary & Pay ────────────────────────
-function StepPay({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSuccess }) {
+// ── Step 4: Summary & Pay (inner — needs Stripe context) ─────────
+function StepPayInner({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSuccess }) {
+  const stripe = useStripe()
+  const elements = useElements()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -123,6 +127,7 @@ function StepPay({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSuccess }
   const perDayCents = Math.round(effectiveCents / 7)
 
   async function handlePay() {
+    if (!stripe || !elements) return
     setLoading(true)
     setError(null)
     try {
@@ -144,12 +149,10 @@ function StepPay({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSuccess }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create challenge')
 
-      // Load Stripe.js dynamically to avoid blocking initial load
-      const { loadStripe } = await import('@stripe/stripe-js')
-      const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
-      if (!stripe) throw new Error('Stripe.js failed to load')
-
-      const { error: stripeError } = await stripe.confirmCardPayment(data.client_secret)
+      const cardElement = elements.getElement(CardElement)
+      const { error: stripeError } = await stripe.confirmCardPayment(data.client_secret, {
+        payment_method: { card: cardElement },
+      })
       if (stripeError) throw new Error(stripeError.message)
 
       // Success — webhook will activate challenge asynchronously
@@ -189,15 +192,32 @@ function StepPay({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSuccess }
         ))}
       </div>
 
+      <div style={s.cardElementWrap}>
+        <CardElement options={{ style: { base: { fontSize: '16px', color: '#F1F5F9', '::placeholder': { color: '#64748B' } } } }} />
+      </div>
+
       {error && <p style={{ color: 'var(--color-danger)', fontSize: 14, marginBottom: 16 }}>{error}</p>}
 
       <div style={s.btnRow}>
-        <button className="btn" onClick={onBack} disabled={loading} style={s.backBtn}>← Back</button>
-        <button className="btn btn-primary" onClick={handlePay} disabled={loading} style={{ flex: 1, padding: '14px' }}>
+        <button type="button" className="btn" onClick={onBack} disabled={loading} style={s.backBtn}>← Back</button>
+        <button type="button" className="btn btn-primary" onClick={handlePay} disabled={loading || !stripe} style={{ flex: 1, padding: '14px' }}>
           {loading ? 'Processing…' : `Start Challenge — Pay $${stake.toFixed(2)}`}
         </button>
       </div>
     </div>
+  )
+}
+
+// ── Step 4: wrapper that provides Stripe Elements context ─────────
+function StepPay(props) {
+  const stripePromise = useMemo(
+    () => loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY),
+    []
+  )
+  return (
+    <Elements stripe={stripePromise}>
+      <StepPayInner {...props} />
+    </Elements>
   )
 }
 
@@ -279,6 +299,10 @@ const s = {
     borderRadius: 10, padding: 16, marginBottom: 8,
   },
   btnRow: { display: 'flex', gap: 12, marginTop: 24 },
+  cardElementWrap: {
+    background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+    borderRadius: 8, padding: '14px 16px', marginBottom: 16,
+  },
   backBtn: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text)', padding: '12px 16px' },
   optionCard: {
     background: 'var(--color-surface)', border: '2px solid var(--color-border)',

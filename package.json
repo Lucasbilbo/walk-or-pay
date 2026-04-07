@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.1.0",
     "@stripe/stripe-js": "^4.3.0",
     "@supabase/supabase-js": "^2.49.0",
     "react": "^19.0.0",
