@@ -51,7 +51,14 @@ function supabaseUpsert(supabaseUrl, serviceKey, body) {
     }, (res) => {
       let d = ''
       res.on('data', c => d += c)
-      res.on('end', () => resolve(res.statusCode))
+      res.on('end', () => {
+        if (res.statusCode >= 300) {
+          console.error('[google-auth-callback] Supabase upsert failed, status:', res.statusCode, 'body:', d)
+          reject(new Error(`Supabase upsert failed: ${res.statusCode} ${d}`))
+        } else {
+          resolve(res.statusCode)
+        }
+      })
     })
     req.on('error', reject)
     req.write(bodyStr)
@@ -120,6 +127,7 @@ exports.handler = async (event) => {
 
   const { access_token, refresh_token, expires_in } = tokenRes.body
   const expiresAt = new Date(Date.now() + (expires_in || 3600) * 1000).toISOString()
+  console.log('[google-auth-callback] Token exchange OK, userId:', userId, 'has_refresh_token:', !!refresh_token)
 
   // Save tokens server-side only — NEVER return access_token or refresh_token to client
   try {
