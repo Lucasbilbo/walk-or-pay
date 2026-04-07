@@ -11,6 +11,7 @@ export default function ConnectFitness() {
     try {
       let { data: { session }, error } = await supabase.auth.getSession()
       console.log('Session:', session, 'Error:', error)
+      console.log('Session token:', session?.access_token ? 'present' : 'missing')
 
       if (!session) {
         // Fallback: refresh session in case it wasn't loaded yet
