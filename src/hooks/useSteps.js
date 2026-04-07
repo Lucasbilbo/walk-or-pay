@@ -3,13 +3,17 @@ import { supabase } from '../lib/supabase'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 
-export function useSteps() {
+export function useSteps(enabled = true) {
   const [steps, setSteps] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const intervalRef = useRef(null)
 
   const refetch = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -30,7 +34,7 @@ export function useSteps() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [enabled])
 
   useEffect(() => {
     refetch()

@@ -17,7 +17,7 @@ export default function App() {
   const [hasFitnessToken, setHasFitnessToken] = useState(null) // null = unknown
 
   const { challenge, dailyLogs, loading: challengeLoading, refetch: refetchChallenge } = useChallenge(user?.id)
-  const { steps, loading: stepsLoading, error: stepsError, refetch: refetchSteps } = useSteps()
+  const { steps, loading: stepsLoading, error: stepsError, refetch: refetchSteps } = useSteps(!!hasFitnessToken)
 
   // Load profile — NEVER run queries inside onAuthStateChange, use useEffect on user
   useEffect(() => {

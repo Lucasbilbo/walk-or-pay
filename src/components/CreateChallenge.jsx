@@ -25,7 +25,7 @@ function StepGoal({ goal, onChange, onNext }) {
         style={{ width: '100%', accentColor: 'var(--color-primary)', margin: '20px 0' }}
       />
       <p style={s.note}>💡 Most health guidelines recommend 7,000–10,000 steps/day</p>
-      <button className="btn btn-primary" onClick={onNext} style={s.fullBtn}>Next →</button>
+      <button type="button" className="btn btn-primary" onClick={onNext} style={s.fullBtn}>Next →</button>
     </div>
   )
 }
@@ -75,8 +75,8 @@ function StepStake({ stake, onChange, welcomeBonusUsed, onNext, onBack }) {
       )}
 
       <div style={s.btnRow}>
-        <button className="btn" onClick={onBack} style={s.backBtn}>← Back</button>
-        <button className="btn btn-primary" onClick={onNext} disabled={!valid} style={{ flex: 1 }}>Next →</button>
+        <button type="button" className="btn" onClick={onBack} style={s.backBtn}>← Back</button>
+        <button type="button" className="btn btn-primary" onClick={onNext} disabled={!valid} style={{ flex: 1 }}>Next →</button>
       </div>
     </div>
   )
@@ -108,8 +108,8 @@ function StepGraceDay({ graceDays, onChange, onNext, onBack }) {
         ))}
       </div>
       <div style={s.btnRow}>
-        <button className="btn" onClick={onBack} style={s.backBtn}>← Back</button>
-        <button className="btn btn-primary" onClick={onNext} style={{ flex: 1 }}>Next →</button>
+        <button type="button" className="btn" onClick={onBack} style={s.backBtn}>← Back</button>
+        <button type="button" className="btn btn-primary" onClick={onNext} style={{ flex: 1 }}>Next →</button>
       </div>
     </div>
   )
@@ -229,8 +229,7 @@ export default function CreateChallenge({ welcomeBonusUsed, onBack, onSuccess })
   const [graceDays, setGraceDays] = useState(1)
 
   function handleSuccess() {
-    // Brief pause so user sees success before redirect
-    setTimeout(onSuccess, 2000)
+    onSuccess()
   }
 
   return (
@@ -238,6 +237,7 @@ export default function CreateChallenge({ welcomeBonusUsed, onBack, onSuccess })
       {/* Header with back + progress dots */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
         <button
+          type="button"
           className="btn"
           onClick={onBack}
           style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', padding: '0', fontSize: 14 }}
