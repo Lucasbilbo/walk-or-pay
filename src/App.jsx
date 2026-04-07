@@ -30,7 +30,7 @@ export default function App() {
     supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .maybeSingle() // NEVER .single()
       .then(({ data }) => {
         setProfile(data)
