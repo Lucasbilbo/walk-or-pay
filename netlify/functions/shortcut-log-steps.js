@@ -66,9 +66,10 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) }
   }
 
-  const { token, steps } = parsed
+  const token = parsed.token
+  const steps = parseInt(parsed.steps, 10)
 
-  if (!token || typeof steps !== 'number') {
+  if (!token || isNaN(steps)) {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'token and steps (number) required' }) }
   }
 
