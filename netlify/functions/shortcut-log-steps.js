@@ -67,7 +67,7 @@ exports.handler = async (event) => {
   }
 
   const token = parsed.token
-  const steps = parseInt(parsed.steps, 10)
+  const steps = Math.round(parseFloat(String(parsed.steps)))
 
   if (!token || isNaN(steps)) {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'token and steps (number) required' }) }
