@@ -66,11 +66,17 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) }
   }
 
-  const { token, steps, date } = parsed
+  const { token, steps } = parsed
 
-  if (!token || typeof steps !== 'number' || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'token, steps (number), and date (YYYY-MM-DD) required' }) }
+  if (!token || typeof steps !== 'number') {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'token and steps (number) required' }) }
   }
+
+  // Accept any date format or default to today UTC
+  const dateObj = new Date(parsed.date || Date.now())
+  const date = isNaN(dateObj.getTime())
+    ? new Date().toISOString().split('T')[0]
+    : dateObj.toISOString().split('T')[0]
 
   // Resolve user_id from personal token
   let tokenRow
