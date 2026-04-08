@@ -4,6 +4,7 @@ import {
   calculateEffectiveAmount,
   calculateStepsRemaining,
   calculateRefund,
+  isGoalMet,
 } from '../lib/challengeLogic'
 
 describe('calculatePenalty', () => {
@@ -56,6 +57,24 @@ describe('calculateStepsRemaining', () => {
     const result = calculateStepsRemaining(8000, 8000)
     expect(result.goalReached).toBe(true)
     expect(result.remaining).toBe(0)
+  })
+})
+
+describe('isGoalMet (shortcut-log-steps logic)', () => {
+  it('steps equal to goal → goal met', () => {
+    expect(isGoalMet(8000, 8000)).toBe(true)
+  })
+
+  it('steps above goal → goal met', () => {
+    expect(isGoalMet(9500, 8000)).toBe(true)
+  })
+
+  it('steps below goal → goal not met', () => {
+    expect(isGoalMet(6000, 8000)).toBe(false)
+  })
+
+  it('0 steps → goal not met', () => {
+    expect(isGoalMet(0, 8000)).toBe(false)
   })
 })
 

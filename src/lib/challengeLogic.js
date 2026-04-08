@@ -42,6 +42,17 @@ export function calculateStepsRemaining(goal, current) {
 }
 
 /**
+ * Determine if a daily step goal is met.
+ * Used by shortcut-log-steps and tests.
+ * @param {number} steps
+ * @param {number} dailyGoal
+ * @returns {boolean}
+ */
+export function isGoalMet(steps, dailyGoal) {
+  return steps >= dailyGoal
+}
+
+/**
  * Calculate refund amount after applying penalty.
  * @param {number} amountCents - actual deposit (what was charged)
  * @param {number} penaltyCents

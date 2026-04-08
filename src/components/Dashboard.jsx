@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { calculateStepsRemaining } from '../lib/challengeLogic'
+import IOSSetup from './IOSSetup'
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -226,8 +227,9 @@ export default function Dashboard({
 
       {/* ── Section 4: Actions ── */}
       {canUseGraceDay && (
-        <div className="card">
+        <div className="card" style={{ marginBottom: 12 }}>
           <button
+            type="button"
             className="btn btn-primary"
             onClick={handleUseGraceDay}
             disabled={graceDayLoading}
@@ -241,6 +243,9 @@ export default function Dashboard({
           {graceDayError && <p style={{ color: 'var(--color-danger)', fontSize: 13, marginTop: 8 }}>{graceDayError}</p>}
         </div>
       )}
+
+      {/* ── Section 5: iOS Setup ── */}
+      <IOSSetup />
     </div>
   )
 }
