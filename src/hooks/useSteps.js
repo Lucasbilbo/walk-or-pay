@@ -3,13 +3,27 @@ import { supabase } from '../lib/supabase'
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 
-export function useSteps(enabled = true) {
+export function useSteps(enabled = true, logSteps = null) {
   const [steps, setSteps] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const intervalRef = useRef(null)
 
+  // Sync logSteps into state whenever it changes (e.g. iOS shortcut updated the log)
+  useEffect(() => {
+    if (logSteps > 0) {
+      setSteps(logSteps)
+      setLoading(false)
+    }
+  }, [logSteps])
+
   const refetch = useCallback(async () => {
+    // If today's log already has steps, no need to call Google Fit
+    if (logSteps > 0) {
+      setSteps(logSteps)
+      setLoading(false)
+      return
+    }
     if (!enabled) {
       setLoading(false)
       return
@@ -34,7 +48,7 @@ export function useSteps(enabled = true) {
     } finally {
       setLoading(false)
     }
-  }, [enabled])
+  }, [enabled, logSteps])
 
   useEffect(() => {
     refetch()

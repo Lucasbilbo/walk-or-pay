@@ -17,7 +17,12 @@ export default function App() {
   const [hasFitnessToken, setHasFitnessToken] = useState(null) // null = unknown
 
   const { challenge, dailyLogs, loading: challengeLoading, refetch: refetchChallenge } = useChallenge(user?.id)
-  const { steps, loading: stepsLoading, error: stepsError, refetch: refetchSteps } = useSteps(!!hasFitnessToken)
+
+  // If today's daily_log already has steps (e.g. from iOS Shortcut), use them directly
+  const today = new Date().toISOString().split('T')[0]
+  const todayLogSteps = dailyLogs.find(l => l.log_date === today)?.steps ?? null
+
+  const { steps, loading: stepsLoading, error: stepsError, refetch: refetchSteps } = useSteps(!!hasFitnessToken, todayLogSteps)
 
   // Load profile — NEVER run queries inside onAuthStateChange, use useEffect on user
   useEffect(() => {
