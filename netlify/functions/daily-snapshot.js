@@ -170,7 +170,7 @@ exports.handler = async (event) => {
       // Check if daily_log for yesterday already exists
       const existingLogs = await withTimeout(
         supabaseGet(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-          `daily_logs?challenge_id=eq.${challenge.id}&date=eq.${yesterday}&select=id`),
+          `daily_logs?challenge_id=eq.${challenge.id}&log_date=eq.${yesterday}&select=id`),
         5000
       )
       const logExists = Array.isArray(existingLogs) && existingLogs.length > 0
@@ -185,7 +185,7 @@ exports.handler = async (event) => {
           supabaseInsert(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'daily_logs', {
             challenge_id: challenge.id,
             user_id: challenge.user_id,
-            date: yesterday,
+            log_date: yesterday,
             steps: stepCount,
             goal_met: goalMet,
             grace_day_used: false,

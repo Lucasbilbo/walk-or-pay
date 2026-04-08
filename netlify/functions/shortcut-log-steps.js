@@ -119,7 +119,7 @@ exports.handler = async (event) => {
       supabaseUpsert(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'daily_logs', {
         challenge_id: challenge.id,
         user_id: userId,
-        date,
+        log_date: date,
         steps,
         goal_met: goalMet,
         grace_day_used: false,

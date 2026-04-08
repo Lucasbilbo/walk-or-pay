@@ -8,6 +8,7 @@ export default function IOSSetup() {
   const [copied, setCopied] = useState(false)
 
   async function handleGetToken() {
+    console.log('[IOSSetup] handleGetToken called')
     setLoading(true)
     setError(null)
     try {
@@ -83,14 +84,13 @@ export default function IOSSetup() {
 
       {error && <p style={{ color: 'var(--color-danger)', fontSize: 12, marginTop: 8 }}>{error}</p>}
 
-      <a
-        href="https://walk-or-pay.netlify.app/shortcut"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ display: 'block', marginTop: 10, fontSize: 12, color: 'var(--color-primary)', textDecoration: 'none' }}
+      <button
+        type="button"
+        onClick={() => alert('Shortcut coming soon!')}
+        style={{ background: 'none', border: 'none', padding: 0, marginTop: 10, fontSize: 12, color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }}
       >
         ↓ Download Shortcut
-      </a>
+      </button>
     </div>
   )
 }

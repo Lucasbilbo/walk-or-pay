@@ -31,7 +31,7 @@ export function useChallenge(userId) {
           .from('daily_logs')
           .select('*')
           .eq('challenge_id', challengeData.id)
-          .order('date', { ascending: true })
+          .order('log_date', { ascending: true })
         if (logsErr) throw logsErr
         setDailyLogs(logs || [])
       } else {

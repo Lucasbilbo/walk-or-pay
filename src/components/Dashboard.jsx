@@ -69,7 +69,7 @@ export default function Dashboard({
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const todayLog = dailyLogs.find(l => l.date === today)
+  const todayLog = dailyLogs.find(l => l.log_date === today)
   const currentSteps = steps ?? 0
   const dailyGoal = challenge.daily_goal
   const { remaining, minutesEstimate, goalReached } = calculateStepsRemaining(dailyGoal, currentSteps)
@@ -88,7 +88,7 @@ export default function Dashboard({
     const d = new Date(startDate)
     d.setDate(d.getDate() + i)
     const dateStr = d.toISOString().split('T')[0]
-    const log = dailyLogs.find(l => l.date === dateStr)
+    const log = dailyLogs.find(l => l.log_date === dateStr)
     const isToday = dateStr === today
     const isFuture = dateStr > today
     return { dateStr, label: DAY_LABELS[i], log, isToday, isFuture }

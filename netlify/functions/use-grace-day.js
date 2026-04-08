@@ -152,7 +152,7 @@ exports.handler = async (event) => {
   try {
     logs = await withTimeout(
       supabaseGet(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-        `daily_logs?challenge_id=eq.${encodeURIComponent(challenge_id)}&date=eq.${date}&select=*`),
+        `daily_logs?challenge_id=eq.${encodeURIComponent(challenge_id)}&log_date=eq.${date}&select=*`),
       5000
     )
   } catch {
@@ -174,7 +174,7 @@ exports.handler = async (event) => {
       supabaseUpsert(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'daily_logs', {
         challenge_id,
         user_id: user.id,
-        date,
+        log_date: date,
         steps,
         goal_met: true,
         grace_day_used: true,
