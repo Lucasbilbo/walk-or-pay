@@ -84,13 +84,14 @@ export default function IOSSetup() {
 
       {error && <p style={{ color: 'var(--color-danger)', fontSize: 12, marginTop: 8 }}>{error}</p>}
 
-      <button
-        type="button"
-        onClick={() => alert('Shortcut coming soon!')}
-        style={{ background: 'none', border: 'none', padding: 0, marginTop: 10, fontSize: 12, color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }}
+      <a
+        href="https://www.icloud.com/shortcuts/7c52e0216f6e4df19c3f9d40b47dd3a9"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: 'block', marginTop: 10, fontSize: 12, color: 'var(--color-primary)', textDecoration: 'none' }}
       >
         ↓ Download Shortcut
-      </button>
+      </a>
     </div>
   )
 }
