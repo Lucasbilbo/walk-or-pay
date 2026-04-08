@@ -96,6 +96,8 @@ function stripeCreatePaymentIntent(secretKey, amountCents, metadata) {
     'metadata[challenge_id]': metadata.challenge_id,
     'metadata[user_id]': metadata.user_id,
     'metadata[welcome_bonus_applied]': String(metadata.welcome_bonus_applied),
+    'metadata[daily_goal]': String(metadata.daily_goal),
+    'metadata[effective_amount_cents]': String(metadata.effective_amount_cents),
   }).toString()
   const auth = Buffer.from(`${secretKey}:`).toString('base64')
   return new Promise((resolve, reject) => {
@@ -235,6 +237,8 @@ exports.handler = async (event) => {
         challenge_id: challenge.id,
         user_id: user.id,
         welcome_bonus_applied: welcomeBonusApplied,
+        daily_goal: daily_goal,
+        effective_amount_cents: effectiveAmountCents,
       }),
       5000
     )
