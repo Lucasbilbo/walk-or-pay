@@ -66,6 +66,11 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) }
   }
 
+  console.log('[shortcut-log-steps] raw body:', event.body)
+  console.log('[shortcut-log-steps] parsed body:', JSON.stringify(parsed))
+  console.log('[shortcut-log-steps] steps raw value:', parsed.steps, 'type:', typeof parsed.steps)
+  console.log('[shortcut-log-steps] token raw value:', parsed.token ? 'present' : 'missing')
+
   const token = parsed.token
   const steps = Math.round(parseFloat(String(parsed.steps)))
 
