@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import * as SecureStore from 'expo-secure-store'
 
-const supabaseUrl = 'https://YOUR_SUPABASE_URL.supabase.co'
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY'
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
 
 const ExpoSecureStoreAdapter = {
   getItem: (key) => SecureStore.getItemAsync(key),
@@ -20,4 +20,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-export const SHORTCUT_LOG_URL = 'https://YOUR_NETLIFY_SITE.netlify.app/.netlify/functions/shortcut-log-steps'
+export const SHORTCUT_LOG_URL = 'https://walk-or-pay.netlify.app/.netlify/functions/shortcut-log-steps'
