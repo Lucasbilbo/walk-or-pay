@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Walk or Pay",
+    "slug": "walk-or-pay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.walkorpay.app",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Walk or Pay reads your step count to track your daily challenge progress.",
+        "NSHealthUpdateUsageDescription": "Walk or Pay may write step data for testing purposes."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.walkorpay.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "react-native-health",
+        {
+          "isClinicalDataEnabled": false
+        }
+      ],
+      "@stripe/stripe-react-native"
+    ]
+  }
+}

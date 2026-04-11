@@ -3,3 +3,8 @@ dist/
 .env
 .env.local
 .netlify/
+
+# Expo
+expo-app/node_modules/
+expo-app/.expo/
+expo-app/dist/
