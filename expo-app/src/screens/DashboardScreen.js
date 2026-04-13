@@ -10,14 +10,62 @@ import {
 import { queryQuantitySamples, requestAuthorization } from '@kingstinct/react-native-healthkit'
 import { supabase, SHORTCUT_LOG_URL } from '../lib/supabase'
 
+const API_BASE = 'https://walk-or-pay.netlify.app/.netlify/functions'
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+function getWeekDates(startDate) {
+  const dates = []
+  const start = new Date(startDate + 'T00:00:00')
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    dates.push(d.toISOString().split('T')[0])
+  }
+  return dates
+}
+
+function WeekView({ challenge, dailyLogs }) {
+  const today = new Date().toISOString().split('T')[0]
+  const weekDates = getWeekDates(challenge.start_date)
+
+  return (
+    <View style={styles.weekRow}>
+      {weekDates.map((date, i) => {
+        const log = dailyLogs.find(l => l.log_date === date)
+        const isToday = date === today
+        const isFuture = date > today
+        const goalMet = log?.goal_met === true
+        const goalFailed = log && !log.goal_met && !log.grace_day_used && !isFuture
+
+        let emoji = '⚪'
+        let dotStyle = styles.dotGray
+        if (isToday) { emoji = '🔵'; dotStyle = styles.dotBlue }
+        else if (goalMet) { emoji = '✅'; dotStyle = styles.dotGreen }
+        else if (goalFailed) { emoji = '❌'; dotStyle = styles.dotRed }
+
+        return (
+          <View key={date} style={styles.dayCol}>
+            <Text style={styles.dayEmoji}>{emoji}</Text>
+            <Text style={[styles.dayLabel, isToday && styles.dayLabelToday]}>
+              {DAY_LABELS[i]}
+            </Text>
+          </View>
+        )
+      })}
+    </View>
+  )
+}
+
 export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
   const [steps, setSteps] = useState(null)
   const [stepsLoading, setStepsLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [challenge, setChallenge] = useState(null)
+  const [dailyLogs, setDailyLogs] = useState([])
   const [challengeLoading, setChallengeLoading] = useState(true)
   const [token, setToken] = useState(null)
   const [lastSyncedAt, setLastSyncedAt] = useState(null)
+  const [graceDayLoading, setGraceDayLoading] = useState(false)
 
   useEffect(() => {
     loadChallenge()
@@ -53,16 +101,26 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
 
   async function loadChallenge() {
     setChallengeLoading(true)
-    const { data, error } = await supabase
+    const { data: ch } = await supabase
       .from('challenges')
-      .select('id,daily_goal,status,start_date,end_date,amount_cents,effective_amount_cents')
+      .select('id,daily_goal,status,start_date,end_date,amount_cents,effective_amount_cents,grace_days,grace_days_used')
       .eq('user_id', user.id)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    if (!error) setChallenge(data)
+    setChallenge(ch ?? null)
+
+    if (ch) {
+      const { data: logs } = await supabase
+        .from('daily_logs')
+        .select('log_date,steps,goal_met,grace_day_used')
+        .eq('challenge_id', ch.id)
+        .order('log_date', { ascending: true })
+      setDailyLogs(logs ?? [])
+    }
+
     setChallengeLoading(false)
   }
 
@@ -71,7 +129,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
     if (!session) return
 
     try {
-      const res = await fetch('https://walk-or-pay.netlify.app/.netlify/functions/generate-user-token', {
+      const res = await fetch(`${API_BASE}/generate-user-token`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
@@ -129,6 +187,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
       }
 
       setLastSyncedAt(new Date())
+      loadChallenge()
     } catch (err) {
       Alert.alert('Sync error', err.message)
     } finally {
@@ -136,9 +195,51 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
     }
   }
 
+  async function handleGraceDay() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+
+    setGraceDayLoading(true)
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const res = await fetch(`${API_BASE}/use-grace-day`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ challenge_id: challenge.id, date: today }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        Alert.alert('Error', data.error || 'Failed to use grace day')
+        return
+      }
+      loadChallenge()
+    } catch (err) {
+      Alert.alert('Error', err.message)
+    } finally {
+      setGraceDayLoading(false)
+    }
+  }
+
+  const today = new Date().toISOString().split('T')[0]
   const goalMet = challenge && steps !== null && steps >= challenge.daily_goal
   const stepsRemaining = challenge && steps !== null
     ? Math.max(0, challenge.daily_goal - steps)
+    : null
+  const stepsProgress = challenge && steps !== null
+    ? Math.min(1, steps / challenge.daily_goal)
+    : 0
+  const todayLog = dailyLogs.find(l => l.log_date === today)
+  const graceDaysLeft = challenge ? (challenge.grace_days ?? 0) - (challenge.grace_days_used ?? 0) : 0
+  const showGraceDay = challenge
+    && !goalMet
+    && !todayLog?.goal_met
+    && !todayLog?.grace_day_used
+    && graceDaysLeft > 0
+  const dailyRisk = challenge
+    ? (challenge.effective_amount_cents / 7 / 100).toFixed(2)
     : null
 
   return (
@@ -166,6 +267,11 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
                   ? `Goal reached! (${challenge.daily_goal.toLocaleString()} steps)`
                   : `${stepsRemaining.toLocaleString()} to go · goal: ${challenge.daily_goal.toLocaleString()}`}
               </Text>
+            )}
+            {challenge && (
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${stepsProgress * 100}%` }]} />
+              </View>
             )}
           </>
         ) : (
@@ -198,20 +304,48 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
         </Text>
       )}
 
-      {/* Challenge info */}
+      {/* Active challenge */}
       {!challengeLoading && challenge && (
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>ACTIVE CHALLENGE</Text>
-          <Text style={styles.challengeGoal}>
-            {challenge.daily_goal.toLocaleString()} steps/day
-          </Text>
-          <Text style={styles.challengeDetail}>
-            {challenge.start_date} → {challenge.end_date}
-          </Text>
-          <Text style={styles.challengeDetail}>
-            Stake: ${(challenge.effective_amount_cents / 100).toFixed(2)}
-          </Text>
-        </View>
+        <>
+          {/* Week view */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>THIS WEEK</Text>
+            <WeekView challenge={challenge} dailyLogs={dailyLogs} />
+          </View>
+
+          {/* Stats */}
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>CHALLENGE STATS</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>${dailyRisk}</Text>
+                <Text style={styles.statLabel}>Today's risk</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{graceDaysLeft}</Text>
+                <Text style={styles.statLabel}>Grace days left</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{challenge.end_date}</Text>
+                <Text style={styles.statLabel}>Ends</Text>
+              </View>
+            </View>
+
+            {showGraceDay && (
+              <TouchableOpacity
+                style={[styles.graceDayButton, graceDayLoading && styles.graceDayButtonDisabled]}
+                onPress={handleGraceDay}
+                disabled={graceDayLoading}
+              >
+                <Text style={styles.graceDayText}>
+                  {graceDayLoading ? 'Using grace day…' : 'Use grace day for today'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </>
       )}
 
       {!challengeLoading && !challenge && (
@@ -255,14 +389,26 @@ const styles = StyleSheet.create({
     color: '#999',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   stepsLoading: { fontSize: 48, color: '#ccc', fontWeight: '700' },
   stepsCount: { fontSize: 64, fontWeight: '800', color: '#1a1a1a', lineHeight: 72 },
   stepsCountSuccess: { color: '#16a34a' },
-  stepsGoal: { fontSize: 14, color: '#888', marginTop: 4 },
+  stepsGoal: { fontSize: 14, color: '#888', marginTop: 4, marginBottom: 10 },
   stepsError: { fontSize: 16, color: '#ef4444' },
-  refreshButton: { marginTop: 12, alignSelf: 'flex-start' },
+  progressTrack: {
+    height: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  progressFill: {
+    height: 6,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 3,
+  },
+  refreshButton: { marginTop: 10, alignSelf: 'flex-start' },
   refreshText: { fontSize: 13, color: '#888', textDecorationLine: 'underline' },
   syncButton: {
     backgroundColor: '#1a1a1a',
@@ -274,8 +420,40 @@ const styles = StyleSheet.create({
   syncButtonDisabled: { opacity: 0.4 },
   syncButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   syncedAt: { fontSize: 12, color: '#aaa', textAlign: 'center', marginBottom: 16 },
-  challengeGoal: { fontSize: 22, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
-  challengeDetail: { fontSize: 14, color: '#888', marginTop: 2 },
+  // Week view
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dayCol: { alignItems: 'center', flex: 1 },
+  dayEmoji: { fontSize: 22, marginBottom: 4 },
+  dayLabel: { fontSize: 11, color: '#aaa', fontWeight: '500' },
+  dayLabelToday: { color: '#1a1a1a', fontWeight: '700' },
+  dotGray: {},
+  dotBlue: {},
+  dotGreen: {},
+  dotRed: {},
+  // Stats
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statBox: { flex: 1, alignItems: 'center' },
+  statValue: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 2 },
+  statLabel: { fontSize: 11, color: '#aaa' },
+  statDivider: { width: 1, height: 32, backgroundColor: '#f0f0f0' },
+  // Grace day
+  graceDayButton: {
+    marginTop: 16,
+    borderWidth: 1.5,
+    borderColor: '#1a1a1a',
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+  },
+  graceDayButtonDisabled: { opacity: 0.4 },
+  graceDayText: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  // No challenge
   noChallenge: { fontSize: 14, color: '#888', marginTop: 4, lineHeight: 20, marginBottom: 16 },
   startButton: {
     backgroundColor: '#1a1a1a',
