@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import * as SecureStore from 'expo-secure-store'
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = 'https://zbqwosnlunkhrcuxwmop.supabase.co'
+const supabaseAnonKey = 'sb_publishable_buyW9tZ7nkRBrYc94SVVnQ_Vt8Kij1W'
+console.log('[supabase] initializing with URL:', supabaseUrl)
 
 const ExpoSecureStoreAdapter = {
   getItem: (key) => SecureStore.getItemAsync(key),

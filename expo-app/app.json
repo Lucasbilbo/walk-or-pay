@@ -2,6 +2,7 @@
   "expo": {
     "name": "Walk or Pay",
     "slug": "walk-or-pay",
+    "scheme": "walkorpay",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,8 +17,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.walkorpay.app",
       "infoPlist": {
-        "NSHealthShareUsageDescription": "Walk or Pay reads your step count to track your daily challenge progress.",
-        "NSHealthUpdateUsageDescription": "Walk or Pay may write step data for testing purposes."
+        "NSHealthShareUsageDescription": "Walk or Pay reads your step count to verify your daily challenge.",
+        "NSHealthUpdateUsageDescription": "Walk or Pay needs access to your health data."
       }
     },
     "android": {
@@ -32,14 +33,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store",
       [
-        "react-native-health",
+        "@kingstinct/react-native-healthkit",
         {
-          "isClinicalDataEnabled": false
+          "NSHealthShareUsageDescription": "Walk or Pay reads your step count to verify your daily challenge.",
+          "NSHealthUpdateUsageDescription": "Walk or Pay needs access to your health data."
         }
-      ],
-      "@stripe/stripe-react-native"
+      ]
     ]
   }
 }

@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native'
 import { supabase } from '../lib/supabase'
+console.log('[LoginScreen] supabase URL:', supabase.supabaseUrl)
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
@@ -26,7 +27,10 @@ export default function LoginScreen() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmed,
-      options: { shouldCreateUser: true },
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: 'walkorpay://auth/callback',
+      },
     })
     setLoading(false)
 

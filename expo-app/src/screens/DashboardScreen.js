@@ -6,19 +6,11 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Platform,
 } from 'react-native'
-import AppleHealthKit from 'react-native-health'
+import { queryQuantitySamples, requestAuthorization } from '@kingstinct/react-native-healthkit'
 import { supabase, SHORTCUT_LOG_URL } from '../lib/supabase'
 
-const HEALTH_PERMISSIONS = {
-  permissions: {
-    read: [AppleHealthKit.Constants.Permissions.StepCount],
-    write: [],
-  },
-}
-
-export default function DashboardScreen({ user, onSignOut }) {
+export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
   const [steps, setSteps] = useState(null)
   const [stepsLoading, setStepsLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -30,7 +22,24 @@ export default function DashboardScreen({ user, onSignOut }) {
   useEffect(() => {
     loadChallenge()
     loadToken()
-    initHealthKit()
+  }, [])
+
+  useEffect(() => {
+    const initHealth = async () => {
+      try {
+        await requestAuthorization({
+          toRead: ['HKQuantityTypeIdentifierStepCount'],
+          toWrite: [],
+        })
+        await fetchTodaySteps()
+      } catch (e) {
+        console.error('[HealthKit] error:', e)
+        setSteps(0)
+      } finally {
+        setStepsLoading(false)
+      }
+    }
+    initHealth()
   }, [])
 
   async function loadChallenge() {
@@ -53,7 +62,7 @@ export default function DashboardScreen({ user, onSignOut }) {
     if (!session) return
 
     try {
-      const res = await fetch('/.netlify/functions/generate-user-token', {
+      const res = await fetch('https://walk-or-pay.netlify.app/.netlify/functions/generate-user-token', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
@@ -64,44 +73,27 @@ export default function DashboardScreen({ user, onSignOut }) {
     }
   }
 
-  function initHealthKit() {
-    if (Platform.OS !== 'ios') {
-      setStepsLoading(false)
-      return
+  const fetchTodaySteps = useCallback(async () => {
+    try {
+      const now = new Date()
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const samples = await queryQuantitySamples('HKQuantityTypeIdentifierStepCount', {
+        from: startOfDay,
+        to: now,
+        unit: 'count',
+      })
+      const totalSteps = samples.reduce((sum, s) => sum + s.quantity, 0)
+      setSteps(Math.round(totalSteps))
+    } catch (e) {
+      console.error('[HealthKit] getQuantitySamples error:', e)
     }
-
-    AppleHealthKit.initHealthKit(HEALTH_PERMISSIONS, (err) => {
-      if (err) {
-        console.error('[DashboardScreen] HealthKit init error:', err)
-        setStepsLoading(false)
-        return
-      }
-      fetchTodaySteps()
-    })
-  }
-
-  const fetchTodaySteps = useCallback(() => {
-    if (Platform.OS !== 'ios') return
-
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const options = {
-      date: today.toISOString(),
-      includeManuallyAdded: true,
-    }
-
-    setStepsLoading(true)
-    AppleHealthKit.getStepCount(options, (err, result) => {
-      setStepsLoading(false)
-      if (err) {
-        console.error('[DashboardScreen] getStepCount error:', err)
-        return
-      }
-      const count = Math.round(result?.value ?? 0)
-      setSteps(count)
-    })
   }, [])
+
+  async function handleRefresh() {
+    setStepsLoading(true)
+    await fetchTodaySteps()
+    setStepsLoading(false)
+  }
 
   async function syncSteps() {
     if (!token) {
@@ -174,7 +166,7 @@ export default function DashboardScreen({ user, onSignOut }) {
 
         <TouchableOpacity
           style={styles.refreshButton}
-          onPress={fetchTodaySteps}
+          onPress={handleRefresh}
           disabled={stepsLoading}
         >
           <Text style={styles.refreshText}>Refresh</Text>
@@ -218,8 +210,11 @@ export default function DashboardScreen({ user, onSignOut }) {
         <View style={styles.card}>
           <Text style={styles.cardLabel}>NO ACTIVE CHALLENGE</Text>
           <Text style={styles.noChallenge}>
-            Open the Walk or Pay website to create a challenge.
+            Put money on the line and commit to your daily step goal for 7 days.
           </Text>
+          <TouchableOpacity style={styles.startButton} onPress={onStartChallenge}>
+            <Text style={styles.startButtonText}>Start your first challenge →</Text>
+          </TouchableOpacity>
         </View>
       )}
     </ScrollView>
@@ -273,5 +268,12 @@ const styles = StyleSheet.create({
   syncedAt: { fontSize: 12, color: '#aaa', textAlign: 'center', marginBottom: 16 },
   challengeGoal: { fontSize: 22, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
   challengeDetail: { fontSize: 14, color: '#888', marginTop: 2 },
-  noChallenge: { fontSize: 14, color: '#888', marginTop: 4, lineHeight: 20 },
+  noChallenge: { fontSize: 14, color: '#888', marginTop: 4, lineHeight: 20, marginBottom: 16 },
+  startButton: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+  },
+  startButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 })
