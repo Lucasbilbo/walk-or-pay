@@ -31,9 +31,18 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
           toRead: ['HKQuantityTypeIdentifierStepCount'],
           toWrite: [],
         })
-        await fetchTodaySteps()
+
+        const now = new Date()
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+
+        const samples = await queryQuantitySamples(
+          'HKQuantityTypeIdentifierStepCount',
+          { from: startOfDay, to: now }
+        )
+        const totalSteps = samples.reduce((sum, s) => sum + (s.quantity || 0), 0)
+        setSteps(Math.round(totalSteps))
       } catch (e) {
-        console.error('[HealthKit] error:', e)
+        console.log('[HealthKit] not available yet:', e.message)
         setSteps(0)
       } finally {
         setStepsLoading(false)
@@ -76,16 +85,15 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
   const fetchTodaySteps = useCallback(async () => {
     try {
       const now = new Date()
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
       const samples = await queryQuantitySamples('HKQuantityTypeIdentifierStepCount', {
         from: startOfDay,
         to: now,
-        unit: 'count',
       })
-      const totalSteps = samples.reduce((sum, s) => sum + s.quantity, 0)
+      const totalSteps = samples.reduce((sum, s) => sum + (s.quantity || 0), 0)
       setSteps(Math.round(totalSteps))
     } catch (e) {
-      console.error('[HealthKit] getQuantitySamples error:', e)
+      console.log('[HealthKit] refresh error:', e.message)
     }
   }, [])
 
