@@ -87,12 +87,12 @@ created_at (timestamptz)
 id (uuid pk)
 challenge_id (uuid fk)
 user_id (uuid fk)
-date (date)
+log_date (date)
 steps (int)
 goal_met (bool)
 grace_day_used (bool, default false)
 created_at (timestamptz)
-UNIQUE (challenge_id, date)
+UNIQUE (challenge_id, log_date)
 ```
 
 ### penalty_pool
@@ -164,3 +164,28 @@ walk-or-pay/
 - `netlify dev` for local development (port 8888)
 - `npm test` before every commit
 - `npm run build` to verify no build errors
+
+## How Claude Code should work on this project
+
+### Think Before Coding
+- If a task is ambiguous, state assumptions explicitly and ask before writing code
+- If multiple approaches exist, present them briefly — don't pick silently
+- If the request seems wrong or overcomplicated, say so
+
+### Simplicity First
+- Minimum code that solves the problem. No speculative abstractions.
+- Netlify Functions should stay small and focused — one responsibility each
+- If a function exceeds ~100 lines, that's a signal to stop and ask
+
+### Surgical Changes
+- Touch ONLY the files the task requires
+- Never "improve" adjacent code, formatting, or comments
+- Especially: do NOT refactor auth, token handling, or webhook code unless explicitly asked
+- If you notice dead code or a bug elsewhere, mention it — don't fix it
+
+### Goal-Driven Execution
+- Before implementing, state the plan with verification steps:
+  1. [Step] → verify: [check]
+  2. [Step] → verify: [check]
+- Every task ends with: `npm test && npm run build`
+- When fixing a bug: write a failing test first, then make it pass
