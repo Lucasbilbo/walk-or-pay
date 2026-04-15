@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Términos y condiciones — Walk or Pay</title>
+  <style>
+    :root {
+      --text: #1a1a18;
+      --text2: #5f5e5a;
+      --bg: #ffffff;
+      --border: rgba(0,0,0,0.1);
+      --accent: #534AB7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --text: #e8e6de; --text2: #b4b2a9; --bg: #1c1c1a; --border: rgba(255,255,255,0.1); }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 40px 24px; }
+    .container { max-width: 680px; margin: 0 auto; }
+    .back { display: inline-block; font-size: 13px; color: var(--accent); text-decoration: none; margin-bottom: 32px; }
+    .back:hover { text-decoration: underline; }
+    h1 { font-size: 24px; font-weight: 500; margin-bottom: 8px; }
+    .updated { font-size: 13px; color: var(--text2); margin-bottom: 40px; }
+    h2 { font-size: 16px; font-weight: 500; margin: 32px 0 10px; }
+    p { font-size: 15px; color: var(--text2); margin-bottom: 12px; }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    li { font-size: 15px; color: var(--text2); margin-bottom: 6px; }
+    .highlight { background: rgba(83,74,183,0.08); border-left: 3px solid var(--accent); padding: 12px 16px; border-radius: 0 6px 6px 0; margin: 16px 0; }
+    .highlight p { margin: 0; }
+    hr { border: none; border-top: 0.5px solid var(--border); margin: 40px 0; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="back" href="/">← Volver a Walk or Pay</a>
+
+    <h1>Términos y condiciones</h1>
+    <p class="updated">Última actualización: abril de 2025</p>
+
+    <p>Estos términos regulan el uso de Walk or Pay, un servicio operado por Lucas Bilbao a título personal. Al registrarte y crear un reto, aceptas estos términos en su totalidad.</p>
+
+    <h2>1. ¿Qué es Walk or Pay?</h2>
+    <p>Walk or Pay es una aplicación de compromiso personal. El usuario deposita una cantidad de dinero y se fija un objetivo diario de pasos durante 7 días. Si no se cumple el objetivo en algún día, se pierde una fracción proporcional del depósito. El dinero no cumplido va a un fondo de penalización.</p>
+
+    <div class="highlight">
+      <p>Walk or Pay <strong>no es un juego de azar</strong>. El resultado depende exclusivamente del comportamiento del propio usuario. No hay apuestas contra otros participantes.</p>
+    </div>
+
+    <h2>2. El depósito y la penalización</h2>
+    <p>Al crear un reto, el usuario realiza un pago mediante tarjeta de crédito o débito. Este importe queda retenido durante los 7 días del reto.</p>
+    <p>Al finalizar el reto, se calcula la penalización de la siguiente forma:</p>
+    <ul>
+      <li><strong>Días fallidos</strong>: días en que los pasos registrados no alcanzan el objetivo diario (y no se ha usado un día de gracia).</li>
+      <li><strong>Penalización</strong>: (días fallidos / 7) × importe en juego, redondeado al céntimo más cercano.</li>
+      <li><strong>Reembolso</strong>: depósito original − penalización. Nunca inferior a 0 €.</li>
+    </ul>
+    <p>El reembolso se procesa automáticamente en los 5–10 días hábiles siguientes al cierre del reto, en la misma tarjeta usada para el pago.</p>
+
+    <h2>3. Bono de bienvenida</h2>
+    <p>El primer reto de cada usuario puede beneficiarse de un bono de bienvenida que duplica el importe en juego. En ese caso, el depósito real es el importe elegido, pero la penalización se calcula sobre el doble. El bono se aplica automáticamente y solo está disponible una vez por cuenta.</p>
+
+    <h2>4. Días de gracia</h2>
+    <p>Cada reto puede incluir uno o más días de gracia. Un día de gracia permite marcar un día fallido como excusado, de modo que no penaliza. Una vez usado, no se puede recuperar. Los días de gracia disponibles se muestran en el dashboard del reto.</p>
+
+    <h2>5. Medición de pasos</h2>
+    <p>Los pasos se obtienen automáticamente de Google Fit (Android) o mediante el método de sincronización de la app (iOS). El usuario es responsable de mantener el permiso de acceso activo durante el reto.</p>
+    <p>Si la sincronización falla por causas técnicas ajenas al usuario (fallo del servicio, error del servidor), Walk or Pay revisará el caso individualmente y, si procede, aplicará un día de gracia o anulará la penalización correspondiente. Para reclamaciones, contacta a <a href="mailto:lucasbilbao.lucasbi@gmail.com">lucasbilbao.lucasbi@gmail.com</a>.</p>
+
+    <h2>6. Pagos y reembolsos</h2>
+    <p>Los pagos se procesan mediante Stripe. Walk or Pay no almacena datos de tarjeta. Los reembolsos se emiten automáticamente al cierre del reto. En caso de disputa, el usuario puede contactar a <a href="mailto:lucasbilbao.lucasbi@gmail.com">lucasbilbao.lucasbi@gmail.com</a> antes de iniciar un contracargo con su banco.</p>
+
+    <h2>7. Cancelaciones</h2>
+    <p>Una vez iniciado el reto (pago confirmado), no es posible cancelarlo ni solicitar el reembolso total anticipado. Si el usuario no puede continuar por causa de fuerza mayor, puede contactar con el soporte para valorar el caso individualmente.</p>
+
+    <h2>8. Limitación de responsabilidad</h2>
+    <p>Walk or Pay no se hace responsable de los hábitos de salud del usuario ni de lesiones derivadas del uso de la aplicación. El servicio se proporciona "tal cual" y puede tener interrupciones técnicas. En ningún caso la responsabilidad máxima de Walk or Pay superará el importe depositado por el usuario en el reto en cuestión.</p>
+
+    <h2>9. Modificaciones</h2>
+    <p>Walk or Pay puede actualizar estos términos en cualquier momento. Los cambios se comunicarán por email con al menos 7 días de antelación. El uso continuado del servicio tras ese plazo implica la aceptación de los nuevos términos.</p>
+
+    <h2>10. Legislación aplicable</h2>
+    <p>Estos términos se rigen por la legislación española. Para cualquier controversia, las partes se someten a los juzgados y tribunales de San Sebastián (Donostia), salvo que la normativa de consumo aplicable establezca otro fuero.</p>
+
+    <hr>
+    <p>Contacto: <a href="mailto:lucasbilbao.lucasbi@gmail.com">lucasbilbao.lucasbi@gmail.com</a></p>
+  </div>
+</body>
+</html>

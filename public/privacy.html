@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de privacidad — Walk or Pay</title>
+  <style>
+    :root {
+      --text: #1a1a18;
+      --text2: #5f5e5a;
+      --bg: #ffffff;
+      --border: rgba(0,0,0,0.1);
+      --accent: #534AB7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --text: #e8e6de; --text2: #b4b2a9; --bg: #1c1c1a; --border: rgba(255,255,255,0.1); }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 40px 24px; }
+    .container { max-width: 680px; margin: 0 auto; }
+    .back { display: inline-block; font-size: 13px; color: var(--accent); text-decoration: none; margin-bottom: 32px; }
+    .back:hover { text-decoration: underline; }
+    h1 { font-size: 24px; font-weight: 500; margin-bottom: 8px; }
+    .updated { font-size: 13px; color: var(--text2); margin-bottom: 40px; }
+    h2 { font-size: 16px; font-weight: 500; margin: 32px 0 10px; }
+    p { font-size: 15px; color: var(--text2); margin-bottom: 12px; }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    li { font-size: 15px; color: var(--text2); margin-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    th { text-align: left; padding: 8px 12px; background: rgba(83,74,183,0.06); color: var(--text); font-weight: 500; border-bottom: 0.5px solid var(--border); }
+    td { padding: 8px 12px; color: var(--text2); border-bottom: 0.5px solid var(--border); vertical-align: top; }
+    hr { border: none; border-top: 0.5px solid var(--border); margin: 40px 0; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="back" href="/">← Volver a Walk or Pay</a>
+
+    <h1>Política de privacidad</h1>
+    <p class="updated">Última actualización: abril de 2025</p>
+
+    <p>Walk or Pay es un servicio operado por Lucas Bilbao (en adelante, "el responsable") a título personal. Esta política describe qué datos personales recopilamos, para qué los usamos y qué derechos tienes sobre ellos, de acuerdo con el Reglamento General de Protección de Datos (RGPD) y la legislación española aplicable.</p>
+
+    <h2>1. Responsable del tratamiento</h2>
+    <p>
+      <strong>Responsable:</strong> Lucas Bilbao<br>
+      <strong>Contacto:</strong> <a href="mailto:lucasbilbao.lucasbi@gmail.com">lucasbilbao.lucasbi@gmail.com</a>
+    </p>
+
+    <h2>2. Datos que recopilamos</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Dato</th>
+          <th>Finalidad</th>
+          <th>Base legal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dirección de email</td>
+          <td>Identificación de cuenta, comunicaciones del reto</td>
+          <td>Ejecución del contrato</td>
+        </tr>
+        <tr>
+          <td>Datos de pasos diarios</td>
+          <td>Seguimiento del reto y cálculo de penalizaciones</td>
+          <td>Ejecución del contrato</td>
+        </tr>
+        <tr>
+          <td>Tokens OAuth de Google Fit</td>
+          <td>Obtener pasos automáticamente de Google Fit</td>
+          <td>Consentimiento explícito</td>
+        </tr>
+        <tr>
+          <td>Datos de pago (procesados por Stripe)</td>
+          <td>Cobro del depósito y emisión de reembolsos</td>
+          <td>Ejecución del contrato</td>
+        </tr>
+        <tr>
+          <td>Historial de retos</td>
+          <td>Mostrar resultados y calcular si aplica el bono de bienvenida</td>
+          <td>Ejecución del contrato</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. Datos que NO recopilamos</h2>
+    <ul>
+      <li>No almacenamos datos de tarjeta de crédito o débito. El pago es gestionado íntegramente por Stripe.</li>
+      <li>No vendemos datos a terceros.</li>
+      <li>No usamos tus datos para publicidad.</li>
+      <li>No rastreamos tu ubicación.</li>
+    </ul>
+
+    <h2>4. Encargados de tratamiento (terceros)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Servicio</th>
+          <th>Finalidad</th>
+          <th>País</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="https://supabase.com/privacy" target="_blank">Supabase</a></td>
+          <td>Base de datos y autenticación</td>
+          <td>UE (Frankfurt)</td>
+        </tr>
+        <tr>
+          <td><a href="https://stripe.com/es/privacy" target="_blank">Stripe</a></td>
+          <td>Procesamiento de pagos</td>
+          <td>EEUU (con cláusulas estándar UE)</td>
+        </tr>
+        <tr>
+          <td><a href="https://policies.google.com/privacy" target="_blank">Google</a></td>
+          <td>Datos de pasos via Google Fit API</td>
+          <td>EEUU (con cláusulas estándar UE)</td>
+        </tr>
+        <tr>
+          <td><a href="https://resend.com/legal/privacy-policy" target="_blank">Resend</a></td>
+          <td>Envío de emails transaccionales</td>
+          <td>EEUU (con cláusulas estándar UE)</td>
+        </tr>
+        <tr>
+          <td><a href="https://www.netlify.com/privacy/" target="_blank">Netlify</a></td>
+          <td>Alojamiento de la aplicación</td>
+          <td>EEUU (con cláusulas estándar UE)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Conservación de datos</h2>
+    <ul>
+      <li><strong>Datos de retos y pasos:</strong> se conservan durante la vigencia de la cuenta y hasta 2 años después de su cierre, por razones contables.</li>
+      <li><strong>Tokens de Google Fit:</strong> se eliminan al desconectar Google Fit o al cerrar la cuenta.</li>
+      <li><strong>Datos de pago:</strong> Stripe los conserva según su propia política. Walk or Pay solo guarda el identificador interno del pago.</li>
+    </ul>
+
+    <h2>6. Tus derechos (RGPD)</h2>
+    <p>Como usuario tienes derecho a:</p>
+    <ul>
+      <li><strong>Acceso:</strong> saber qué datos tenemos sobre ti.</li>
+      <li><strong>Rectificación:</strong> corregir datos inexactos.</li>
+      <li><strong>Supresión:</strong> solicitar la eliminación de tu cuenta y datos asociados.</li>
+      <li><strong>Portabilidad:</strong> recibir tus datos en formato estructurado.</li>
+      <li><strong>Oposición y limitación:</strong> oponerte a ciertos tratamientos o solicitar que se limiten.</li>
+      <li><strong>Retirada del consentimiento:</strong> puedes desconectar Google Fit en cualquier momento desde la app.</li>
+    </ul>
+    <p>Para ejercer cualquiera de estos derechos, escribe a <a href="mailto:lucasbilbao.lucasbi@gmail.com">lucasbilbao.lucasbi@gmail.com</a>. Responderemos en un plazo máximo de 30 días. También puedes presentar una reclamación ante la <a href="https://www.aepd.es" target="_blank">Agencia Española de Protección de Datos (AEPD)</a>.</p>
+
+    <h2>7. Seguridad</h2>
+    <p>Los datos se almacenan en Supabase con cifrado en reposo y en tránsito. Los tokens de Google Fit se guardan exclusivamente en el servidor y nunca se exponen al navegador del usuario. El acceso a la base de datos está protegido por políticas de seguridad a nivel de fila (Row Level Security).</p>
+
+    <h2>8. Cookies</h2>
+    <p>Walk or Pay no usa cookies de seguimiento ni publicidad. Solo se usa el almacenamiento local del navegador (<code>localStorage</code>) para mantener la sesión de usuario activa.</p>
+
+    <h2>9. Cambios en esta política</h2>
+    <p>Si actualizamos esta política, lo comunicaremos por email con al menos 7 días de antelación antes de que los cambios entren en vigor.</p>
+
+    <hr>
+    <p>Contacto para asuntos de privacidad: <a href="mailto:lucasbilbao.lucasbi@gmail.com">lucasbilbao.lucasbi@gmail.com</a></p>
+  </div>
+</body>
+</html>
