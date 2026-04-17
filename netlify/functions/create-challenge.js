@@ -70,6 +70,18 @@ function supabaseInsert(supabaseUrl, serviceKey, table, body) {
   })
 }
 
+function supabaseDelete(supabaseUrl, serviceKey, path) {
+  const hostname = new URL(supabaseUrl).hostname
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname, path: `/rest/v1/${path}`, method: 'DELETE',
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+    }, (res) => { res.on('data', () => {}); res.on('end', () => resolve(res.statusCode)) })
+    req.on('error', () => resolve(500))
+    req.end()
+  })
+}
+
 function supabasePatch(supabaseUrl, serviceKey, path, body) {
   const hostname = new URL(supabaseUrl).hostname
   const bodyStr = JSON.stringify(body)
@@ -92,7 +104,7 @@ function supabasePatch(supabaseUrl, serviceKey, path, body) {
 function stripeCreatePaymentIntent(secretKey, amountCents, metadata) {
   const params = new URLSearchParams({
     amount: String(amountCents),
-    currency: 'usd',
+    currency: 'eur',
     'metadata[challenge_id]': metadata.challenge_id,
     'metadata[user_id]': metadata.user_id,
     'metadata[welcome_bonus_applied]': String(metadata.welcome_bonus_applied),
@@ -255,10 +267,24 @@ exports.handler = async (event) => {
   }
 
   // Link payment intent to challenge
-  await supabasePatch(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-    `challenges?id=eq.${challenge.id}`,
-    { stripe_payment_intent_id: paymentIntent.id }
-  )
+  let patchStatus
+  try {
+    patchStatus = await withTimeout(
+      supabasePatch(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+        `challenges?id=eq.${challenge.id}`,
+        { stripe_payment_intent_id: paymentIntent.id }
+      ),
+      5000
+    )
+  } catch (e) {
+    patchStatus = 500
+  }
+  if (patchStatus !== 204) {
+    console.error('[create-challenge] PATCH stripe_payment_intent_id failed, status:', patchStatus)
+    await supabaseDelete(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+      `challenges?id=eq.${challenge.id}`)
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to link payment to challenge' }) }
+  }
 
   return {
     statusCode: 200,
