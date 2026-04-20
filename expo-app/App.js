@@ -7,7 +7,7 @@ import LoginScreen from './src/screens/LoginScreen'
 import DashboardScreen from './src/screens/DashboardScreen'
 import CreateChallengeScreen from './src/screens/CreateChallengeScreen'
 
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51L3es8KsRsSr1xmRBGk7fMCVdx4X6tFrKDPb0xdUYhEECQJEPj7NewowNGqwSl9qWKooRT16pXOm5u3CwNTXVGaH004gdtNTP3'
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 export default function App() {
   const [user, setUser] = useState(null)
