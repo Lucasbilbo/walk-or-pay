@@ -57,30 +57,7 @@ function supabasePatch(supabaseUrl, serviceKey, path, body) {
         apikey: serviceKey, Authorization: `Bearer ${serviceKey}`,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(bodyStr),
-        Prefer: 'return=representation',
-      },
-    }, (res) => {
-      let d = ''
-      res.on('data', c => d += c)
-      res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }) } catch { resolve({ status: res.statusCode, body: null }) } })
-    })
-    req.on('error', () => resolve({ status: 500, body: null }))
-    req.write(bodyStr)
-    req.end()
-  })
-}
-
-function supabaseUpsert(supabaseUrl, serviceKey, table, body) {
-  const hostname = new URL(supabaseUrl).hostname
-  const bodyStr = JSON.stringify(body)
-  return new Promise((resolve) => {
-    const req = https.request({
-      hostname, path: `/rest/v1/${table}`, method: 'POST',
-      headers: {
-        apikey: serviceKey, Authorization: `Bearer ${serviceKey}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(bodyStr),
-        Prefer: 'resolution=merge-duplicates,return=minimal',
+        Prefer: 'return=minimal',
       },
     }, (res) => { res.on('data', () => {}); res.on('end', () => resolve(res.statusCode)) })
     req.on('error', () => resolve(500))
@@ -97,6 +74,7 @@ exports.handler = async (event) => {
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[use-grace-day] Missing required env vars')
     return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server misconfigured' }) }
   }
 
@@ -119,17 +97,20 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) }
   }
 
-  const { challenge_id, date } = parsed
-  if (!challenge_id || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'challenge_id and date (YYYY-MM-DD) required' }) }
+  const { challenge_id } = parsed
+  if (!challenge_id) {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'challenge_id required' }) }
   }
 
-  // Load challenge — verify it belongs to this user and is active
+  // Today in UTC
+  const today = new Date().toISOString().split('T')[0]
+
+  // Load challenge — verify ownership and active status
   let challenges
   try {
     challenges = await withTimeout(
       supabaseGet(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-        `challenges?id=eq.${encodeURIComponent(challenge_id)}&user_id=eq.${encodeURIComponent(user.id)}&select=*`),
+        `challenges?id=eq.${encodeURIComponent(challenge_id)}&user_id=eq.${encodeURIComponent(user.id)}&select=id,user_id,status,grace_days,grace_days_used`),
       5000
     )
   } catch {
@@ -137,66 +118,80 @@ exports.handler = async (event) => {
   }
 
   const challenge = Array.isArray(challenges) ? challenges[0] : null
-  if (!challenge) return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Challenge not found' }) }
+  if (!challenge) {
+    return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Challenge not found' }) }
+  }
   if (challenge.status !== 'active') {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Challenge is not active' }) }
   }
-
-  // Verify grace days available
   if (challenge.grace_days_used >= challenge.grace_days) {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'No grace days remaining' }) }
   }
 
-  // Check existing log for this date — must not already be goal_met
+  // Load today's log — must exist and not already goal_met or grace_day_used
   let logs
   try {
     logs = await withTimeout(
       supabaseGet(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-        `daily_logs?challenge_id=eq.${encodeURIComponent(challenge_id)}&log_date=eq.${date}&select=*`),
+        `daily_logs?challenge_id=eq.${encodeURIComponent(challenge_id)}&log_date=eq.${today}&select=id,goal_met,grace_day_used`),
       5000
     )
   } catch {
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to load daily logs' }) }
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to load daily log' }) }
   }
 
-  const existingLog = Array.isArray(logs) ? logs[0] : null
-  if (existingLog?.goal_met) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Goal already met for this day' }) }
+  const log = Array.isArray(logs) ? logs[0] : null
+  if (!log) {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Aún no hay registro de pasos para hoy' }) }
   }
-  if (existingLog?.grace_day_used) {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Grace day already used for this day' }) }
+  if (log.goal_met) {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Goal already met for today' }) }
+  }
+  if (log.grace_day_used) {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Grace day already used for today' }) }
   }
 
-  // Upsert daily_log with grace_day_used and goal_met = true
-  const steps = existingLog?.steps ?? 0
+  // Mark grace_day_used on the log
+  let patchStatus
   try {
-    await withTimeout(
-      supabaseUpsert(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'daily_logs', {
-        challenge_id,
-        user_id: user.id,
-        log_date: date,
-        steps,
-        goal_met: true,
-        grace_day_used: true,
-      }),
+    patchStatus = await withTimeout(
+      supabasePatch(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+        `daily_logs?challenge_id=eq.${encodeURIComponent(challenge_id)}&log_date=eq.${today}`,
+        { grace_day_used: true }
+      ),
       5000
     )
   } catch (e) {
-    console.error('[use-grace-day] Upsert log failed:', e.message)
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to save grace day' }) }
+    console.error('[use-grace-day] Failed to update daily_log:', e.message)
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to apply grace day' }) }
   }
 
-  // Increment grace_days_used in challenge
-  const patchRes = await supabasePatch(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-    `challenges?id=eq.${encodeURIComponent(challenge_id)}`,
-    { grace_days_used: challenge.grace_days_used + 1 }
-  )
+  if (patchStatus !== 204) {
+    console.error('[use-grace-day] daily_log PATCH returned:', patchStatus)
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to apply grace day' }) }
+  }
 
-  const updatedChallenge = Array.isArray(patchRes.body) ? patchRes.body[0] : null
+  // Increment grace_days_used on challenge
+  const newGraceDaysUsed = challenge.grace_days_used + 1
+  try {
+    await withTimeout(
+      supabasePatch(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+        `challenges?id=eq.${encodeURIComponent(challenge_id)}`,
+        { grace_days_used: newGraceDaysUsed }
+      ),
+      5000
+    )
+  } catch (e) {
+    console.error('[use-grace-day] Failed to update challenge grace_days_used:', e.message)
+    // Log already updated — don't fail the response
+  }
 
   return {
     statusCode: 200,
     headers: { ...CORS, 'Content-Type': 'application/json' },
-    body: JSON.stringify(updatedChallenge || { ...challenge, grace_days_used: challenge.grace_days_used + 1 }),
+    body: JSON.stringify({
+      success: true,
+      grace_days_remaining: challenge.grace_days - newGraceDaysUsed,
+    }),
   }
 }

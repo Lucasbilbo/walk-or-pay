@@ -3,9 +3,12 @@ const crypto = require('crypto')
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, stripe-signature',
+  'Access-Control-Allow-Headers': 'Content-Type, Stripe-Signature',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
+
+// Always 200 to Stripe — prevents indefinite retries on our errors
+const ACK = { statusCode: 200, headers: CORS, body: JSON.stringify({ received: true }) }
 
 function withTimeout(promise, ms) {
   const timer = new Promise((_, reject) =>
@@ -14,22 +17,20 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, timer])
 }
 
-// Stripe signature verification — same pattern as TriCoach
-function verifyStripeSignature(rawBody, signature, secret) {
-  if (!signature || !secret) return false
-  const parts = signature.split(',')
-  const tPart = parts.find(p => p.startsWith('t='))
-  const v1Part = parts.find(p => p.startsWith('v1='))
-  if (!tPart || !v1Part) return false
-  const t = tPart.slice(2)
-  const v1 = v1Part.slice(3)
-  const payload = `${t}.${rawBody}`
-  const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex')
-  try {
-    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(v1))
-  } catch {
-    return false
-  }
+function supabaseGet(supabaseUrl, serviceKey, path) {
+  const hostname = new URL(supabaseUrl).hostname
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname, path: `/rest/v1/${path}`, method: 'GET',
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+    }, (res) => {
+      let d = ''
+      res.on('data', c => d += c)
+      res.on('end', () => { try { resolve(JSON.parse(d)) } catch { resolve(null) } })
+    })
+    req.on('error', () => resolve(null))
+    req.end()
+  })
 }
 
 function supabasePatch(supabaseUrl, serviceKey, path, body) {
@@ -70,165 +71,135 @@ function supabaseUpsert(supabaseUrl, serviceKey, table, body) {
   })
 }
 
-function supabaseGetUser(supabaseUrl, serviceKey, userId) {
-  const hostname = new URL(supabaseUrl).hostname
-  return new Promise((resolve) => {
-    const req = https.request({
-      hostname,
-      path: `/auth/v1/admin/users/${encodeURIComponent(userId)}`,
-      method: 'GET',
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
-    }, (res) => {
-      let d = ''
-      res.on('data', c => d += c)
-      res.on('end', () => { try { resolve(JSON.parse(d)) } catch { resolve(null) } })
-    })
-    req.on('error', () => resolve(null))
-    req.end()
-  })
+// Verify Stripe webhook signature using raw body — must be called before JSON.parse
+function constructStripeEvent(rawBody, sig, secret) {
+  const TOLERANCE_SECONDS = 300
+
+  const parts = sig.split(',').reduce((acc, part) => {
+    const [k, v] = part.split('=')
+    if (k && v) acc[k] = v
+    return acc
+  }, {})
+
+  const timestamp = parts['t']
+  const v1 = parts['v1']
+  if (!timestamp || !v1) throw new Error('Missing signature components')
+
+  const age = Math.floor(Date.now() / 1000) - parseInt(timestamp, 10)
+  if (age > TOLERANCE_SECONDS) throw new Error('Stripe webhook timestamp too old')
+
+  const signedPayload = `${timestamp}.${rawBody}`
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload, 'utf8')
+    .digest('hex')
+
+  const expectedBuf = Buffer.from(expected, 'hex')
+  const receivedBuf = Buffer.from(v1, 'hex')
+
+  if (expectedBuf.length !== receivedBuf.length) throw new Error('Signature length mismatch')
+  if (!crypto.timingSafeEqual(expectedBuf, receivedBuf)) throw new Error('Signature mismatch')
+
+  return JSON.parse(rawBody)
 }
 
-function sendEmail(resendApiKey, to, subject, html) {
-  const bodyStr = JSON.stringify({ from: 'Walk or Pay <noreply@walkOrPay.app>', to, subject, html })
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: 'api.resend.com', path: '/emails', method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(bodyStr),
-      },
-    }, (res) => {
-      let d = ''
-      res.on('data', c => d += c)
-      res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }) } catch { reject(new Error('Parse error')) } })
-    })
-    req.on('error', reject)
-    req.write(bodyStr)
-    req.end()
-  })
+function toDateStr(d) {
+  return d.toISOString().split('T')[0]
 }
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' }
 
+  const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
   const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
   const SUPABASE_URL = process.env.SUPABASE_URL
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const RESEND_API_KEY = process.env.RESEND_API_KEY // optional — email skipped if not set
 
-  if (!STRIPE_WEBHOOK_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server misconfigured' }) }
+  if (!STRIPE_SECRET_KEY || !STRIPE_WEBHOOK_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[stripe-webhook] Missing required env vars')
+    return ACK // still 200 — Stripe must not retry indefinitely
   }
 
-  // Always use the raw body for signature verification
-  const rawBody = event.body || ''
-  const signature = event.headers['stripe-signature'] || ''
-
-  if (!verifyStripeSignature(rawBody, signature, STRIPE_WEBHOOK_SECRET)) {
-    console.error('[stripe-webhook] Invalid signature')
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid signature' }) }
+  const sig = event.headers['stripe-signature'] || ''
+  if (!sig) {
+    console.error('[stripe-webhook] Missing Stripe-Signature header')
+    return ACK
   }
+
+  // Raw body — must NOT be parsed before verification
+  const rawBody = event.isBase64Encoded
+    ? Buffer.from(event.body, 'base64').toString('utf8')
+    : (event.body || '')
 
   let stripeEvent
   try {
-    stripeEvent = JSON.parse(rawBody)
-  } catch {
-    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) }
+    stripeEvent = constructStripeEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET)
+  } catch (e) {
+    console.error('[stripe-webhook] Signature verification failed:', e.message)
+    return ACK
   }
 
   console.log('[stripe-webhook] Event received:', stripeEvent.type)
 
-  // ── payment_intent.succeeded → activate challenge ──────────────────────
-  if (stripeEvent.type === 'payment_intent.succeeded') {
-    const pi = stripeEvent.data?.object
-    const challengeId = pi?.metadata?.challenge_id
-    const userId = pi?.metadata?.user_id
-    const welcomeBonusApplied = pi?.metadata?.welcome_bonus_applied === 'true'
+  if (stripeEvent.type !== 'payment_intent.succeeded') {
+    return ACK
+  }
 
-    if (challengeId && userId) {
-      try {
-        const today = new Date().toISOString().split('T')[0]
-        const endDate = new Date(today)
-        endDate.setDate(endDate.getDate() + 6)
+  const pi = stripeEvent.data.object
+  const paymentIntentId = pi.id
 
-        await withTimeout(
-          supabasePatch(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-            `challenges?id=eq.${challengeId}`, {
-              status: 'active',
-              start_date: today,
-              end_date: endDate.toISOString().split('T')[0],
-            }),
-          5000
-        )
-        console.log('[stripe-webhook] Challenge activated:', challengeId)
+  try {
+    // Find the challenge by payment intent id
+    const rows = await withTimeout(
+      supabaseGet(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+        `challenges?stripe_payment_intent_id=eq.${encodeURIComponent(paymentIntentId)}&select=id,user_id,status,welcome_bonus_applied`),
+      5000
+    )
+    const challenge = Array.isArray(rows) ? rows[0] : null
 
-        // Send confirmation email if Resend is configured
-        if (RESEND_API_KEY) {
-          try {
-            const userData = await withTimeout(supabaseGetUser(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, userId), 5000)
-            const email = userData?.email
-            if (email) {
-              const dailyGoal = pi?.metadata?.daily_goal ? Number(pi.metadata.daily_goal) : null
-              const effectiveCents = pi?.metadata?.effective_amount_cents ? Number(pi.metadata.effective_amount_cents) : null
-              const goalStr = dailyGoal ? dailyGoal.toLocaleString() : 'your'
-              const stakeStr = effectiveCents ? `$${(effectiveCents / 100).toFixed(2)}` : 'your stake'
-              await withTimeout(sendEmail(
-                RESEND_API_KEY,
-                email,
-                'Your Walk or Pay challenge has started! 🚶',
-                `<p>Your 7-day challenge is live. Your daily goal is <strong>${goalStr} steps</strong>.</p>
-                 <p>At stake: <strong>${stakeStr}</strong></p>
-                 <p>Good luck! <a href="https://walkOrPay.netlify.app">View your dashboard</a></p>`
-              ), 5000)
-              console.log('[stripe-webhook] Confirmation email sent to:', email)
-            }
-          } catch (e) {
-            console.error('[stripe-webhook] Email send failed (non-blocking):', e.message)
-          }
-        }
-
-        if (welcomeBonusApplied) {
-          // Ensure profile row exists and mark bonus as used
-          await withTimeout(
-            supabaseUpsert(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'profiles', {
-              user_id: userId,
-              welcome_bonus_used: true,
-            }),
-            5000
-          )
-          console.log('[stripe-webhook] Welcome bonus marked used for user:', userId)
-        }
-      } catch (e) {
-        console.error('[stripe-webhook] Failed to activate challenge:', e.message)
-        // Return 200 anyway — Stripe must not retry this event
-      }
+    if (!challenge) {
+      console.error('[stripe-webhook] No challenge found for payment_intent:', paymentIntentId)
+      return ACK
     }
-  }
 
-  // ── payment_intent.payment_failed → mark challenge cancelled ────────────
-  if (stripeEvent.type === 'payment_intent.payment_failed') {
-    const pi = stripeEvent.data?.object
-    const challengeId = pi?.metadata?.challenge_id
-    if (challengeId) {
-      try {
-        await withTimeout(
-          supabasePatch(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-            `challenges?id=eq.${challengeId}`, { status: 'cancelled' }),
-          5000
-        )
-        console.log('[stripe-webhook] Challenge cancelled (payment failed):', challengeId)
-      } catch (e) {
-        console.error('[stripe-webhook] Failed to cancel challenge:', e.message)
-      }
+    if (challenge.status === 'active') {
+      console.log('[stripe-webhook] Challenge already active, skipping:', challenge.id)
+      return ACK
     }
+
+    // Calculate start/end dates
+    const startDate = new Date()
+    const endDate = new Date(startDate)
+    endDate.setDate(endDate.getDate() + 6)
+
+    // Activate challenge
+    await withTimeout(
+      supabasePatch(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+        `challenges?id=eq.${encodeURIComponent(challenge.id)}`,
+        {
+          status: 'active',
+          start_date: toDateStr(startDate),
+          end_date: toDateStr(endDate),
+        }
+      ),
+      5000
+    )
+    console.log(`[stripe-webhook] Activated challenge ${challenge.id}: ${toDateStr(startDate)} → ${toDateStr(endDate)}`)
+
+    // Ensure profile exists — PK is id, not user_id
+    // Only set welcome_bonus_used: false on insert; don't overwrite if already true
+    await withTimeout(
+      supabaseUpsert(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'profiles',
+        { id: challenge.user_id }
+      ),
+      5000
+    )
+
+  } catch (e) {
+    console.error('[stripe-webhook] Error processing payment_intent.succeeded:', e.message)
+    // Fall through — always return 200 to Stripe
   }
 
-  // Always return 200 to Stripe to acknowledge receipt
-  return {
-    statusCode: 200,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ received: true }),
-  }
+  return ACK
 }

@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { calculateStepsRemaining } from '../lib/challengeLogic'
 import IOSSetup from './IOSSetup'
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const POLL_MS = 5 * 60 * 1000
 
-function fmt(cents) {
-  return `$${(cents / 100).toFixed(2)}`
+function eur(cents) {
+  return `€${(cents / 100).toFixed(2)}`
 }
 
 function ProgressBar({ value, max, color }) {
@@ -21,6 +21,18 @@ function ProgressBar({ value, max, color }) {
       }} />
     </div>
   )
+}
+
+const bonusStyle = {
+  display: 'inline-block',
+  background: 'rgba(245,158,11,0.12)',
+  border: '1px solid var(--color-warning)',
+  borderRadius: 20,
+  padding: '6px 18px',
+  fontSize: 14,
+  color: 'var(--color-warning)',
+  fontWeight: 600,
+  marginBottom: 20,
 }
 
 function EmptyState({ profile, onStartChallenge }) {
@@ -45,69 +57,180 @@ function EmptyState({ profile, onStartChallenge }) {
   )
 }
 
-const bonusStyle = {
-  display: 'inline-block',
-  background: 'rgba(245,158,11,0.12)',
-  border: '1px solid var(--color-warning)',
-  borderRadius: 20,
-  padding: '6px 18px',
-  fontSize: 14,
-  color: 'var(--color-warning)',
-  fontWeight: 600,
-  marginBottom: 20,
+function CompletedSummary({ challenge, dailyLogs, onStartChallenge }) {
+  const completedDays = dailyLogs.filter(l => l.goal_met || l.grace_day_used).length
+  const penaltyCents = challenge.penalty_cents ?? 0
+  const refundCents = Math.max(0, challenge.amount_cents - Math.min(penaltyCents, challenge.amount_cents))
+
+  return (
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px 40px' }}>
+      <div className="card" style={{ marginBottom: 12, textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 12 }}>🏁</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Challenge complete!</h2>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>
+          Week of {challenge.start_date} – {challenge.end_date}
+        </p>
+      </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, textAlign: 'center' }}>
+          <div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-success)' }}>{completedDays}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Days completed</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: penaltyCents > 0 ? 'var(--color-danger)' : 'var(--color-text)' }}>
+              {eur(penaltyCents)}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Penalty</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-primary)' }}>{eur(refundCents)}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Refunded</div>
+          </div>
+        </div>
+      </div>
+
+      <button
+        className="btn btn-primary"
+        onClick={onStartChallenge}
+        style={{ width: '100%', padding: '14px', fontSize: 15 }}
+      >
+        Start a new challenge
+      </button>
+    </div>
+  )
 }
 
-export default function Dashboard({
-  challenge, dailyLogs, steps, stepsLoading, stepsError,
-  onRefetchSteps, onStartChallenge, profile, onRefetchChallenge,
-}) {
-  const [graceDayLoading, setGraceDayLoading] = useState(false)
-  const [graceDayError, setGraceDayError] = useState(null)
-
-  if (!challenge) {
-    return <EmptyState profile={profile} onStartChallenge={onStartChallenge} />
-  }
-
+function WeekView({ challenge, dailyLogs }) {
   const today = new Date().toISOString().split('T')[0]
-  const todayLog = dailyLogs.find(l => l.log_date === today)
-  const currentSteps = steps ?? 0
-  const dailyGoal = challenge.daily_goal
-  const { remaining, minutesEstimate, goalReached } = calculateStepsRemaining(dailyGoal, currentSteps)
-  const pct = dailyGoal > 0 ? Math.min(100, Math.round((currentSteps / dailyGoal) * 100)) : 0
+  const start = new Date(challenge.start_date + 'T12:00:00')
 
-  const todayDone = goalReached || todayLog?.goal_met || todayLog?.grace_day_used
-  const todayClosed = !!todayLog && !todayLog.goal_met && !todayLog.grace_day_used && today > challenge.end_date
-
-  let barColor = 'var(--color-primary)'
-  if (todayDone) barColor = 'var(--color-success)'
-  if (todayClosed) barColor = 'var(--color-danger)'
-
-  // Build 7-day week circles
-  const startDate = new Date(challenge.start_date + 'T12:00:00')
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(startDate)
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start)
     d.setDate(d.getDate() + i)
     const dateStr = d.toISOString().split('T')[0]
     const log = dailyLogs.find(l => l.log_date === dateStr)
-    const isToday = dateStr === today
-    const isFuture = dateStr > today
-    return { dateStr, label: DAY_LABELS[i], log, isToday, isFuture }
+    return { dateStr, label: DAY_LABELS[i], log, isToday: dateStr === today }
   })
 
-  const graceDaysRemaining = challenge.grace_days - challenge.grace_days_used
-  const canUseGraceDay = (
-    graceDaysRemaining > 0 &&
-    !todayLog?.goal_met &&
-    !todayLog?.grace_day_used &&
-    today >= challenge.start_date &&
-    today <= challenge.end_date
-  )
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+      {days.map(({ dateStr, label, log, isToday }) => {
+        let icon = '○'
+        let iconColor = 'var(--color-text-secondary)'
 
+        if (log?.goal_met) {
+          icon = '✓'; iconColor = 'var(--color-success)'
+        } else if (log?.grace_day_used) {
+          icon = '🛡'; iconColor = 'var(--color-warning)'
+        } else if (log && !log.goal_met && !log.grace_day_used) {
+          icon = '✗'; iconColor = 'var(--color-danger)'
+        } else if (isToday) {
+          icon = '●'; iconColor = 'var(--color-primary)'
+        }
+
+        return (
+          <div key={dateStr} style={{ textAlign: 'center', flex: 1 }}>
+            <div style={{ fontSize: 16, color: iconColor, fontWeight: 700, lineHeight: 1.4 }}>{icon}</div>
+            <div style={{
+              fontSize: 10, marginTop: 3,
+              color: isToday ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+              fontWeight: isToday ? 700 : 400,
+            }}>
+              {label}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export default function Dashboard({ user, profile, onStartChallenge }) {
+  const [challenge, setChallenge] = useState(null)
+  const [challengeLoading, setChallengeLoading] = useState(true)
+  const [challengeError, setChallengeError] = useState(null)
+
+  const [dailyLogs, setDailyLogs] = useState([])
+  const [logsLoading, setLogsLoading] = useState(false)
+
+  const [steps, setSteps] = useState(null)
+  const [stepsLoading, setStepsLoading] = useState(false)
+  const [stepsError, setStepsError] = useState(null)
+
+  const [graceDayLoading, setGraceDayLoading] = useState(false)
+  const [graceDayError, setGraceDayError] = useState(null)
+
+  // Load most recent challenge (active or completed)
+  useEffect(() => {
+    if (!user) return
+    setChallengeLoading(true)
+    setChallengeError(null)
+    supabase
+      .from('challenges')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) setChallengeError(error.message)
+        else setChallenge(data)
+        setChallengeLoading(false)
+      })
+  }, [user?.id])
+
+  // Load daily logs when challenge id changes
+  useEffect(() => {
+    if (!challenge?.id) { setDailyLogs([]); return }
+    setLogsLoading(true)
+    supabase
+      .from('daily_logs')
+      .select('log_date,steps,goal_met,grace_day_used')
+      .eq('challenge_id', challenge.id)
+      .order('log_date', { ascending: true })
+      .then(({ data }) => {
+        setDailyLogs(data ?? [])
+        setLogsLoading(false)
+      })
+  }, [challenge?.id])
+
+  // Fetch steps from get-steps endpoint
+  const fetchSteps = useCallback(async () => {
+    if (!challenge || challenge.status !== 'active') return
+    setStepsLoading(true)
+    setStepsError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const today = new Date().toISOString().split('T')[0]
+      const res = await fetch(`/.netlify/functions/get-steps?date=${today}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch steps')
+      setSteps(data.steps)
+    } catch (err) {
+      setStepsError(err.message)
+    } finally {
+      setStepsLoading(false)
+    }
+  }, [challenge?.id, challenge?.status])
+
+  useEffect(() => {
+    fetchSteps()
+    const interval = setInterval(fetchSteps, POLL_MS)
+    return () => clearInterval(interval)
+  }, [fetchSteps])
+
+  // Grace day handler
   async function handleUseGraceDay() {
     setGraceDayLoading(true)
     setGraceDayError(null)
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      const today = new Date().toISOString().split('T')[0]
       const res = await fetch('/.netlify/functions/use-grace-day', {
         method: 'POST',
         headers: {
@@ -118,7 +241,19 @@ export default function Dashboard({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to use grace day')
-      onRefetchChallenge()
+      // Refetch challenge and logs to reflect updated grace_days_used
+      const { data: updated } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('id', challenge.id)
+        .maybeSingle()
+      if (updated) setChallenge(updated)
+      const { data: logs } = await supabase
+        .from('daily_logs')
+        .select('log_date,steps,goal_met,grace_day_used')
+        .eq('challenge_id', challenge.id)
+        .order('log_date', { ascending: true })
+      setDailyLogs(logs ?? [])
     } catch (err) {
       setGraceDayError(err.message)
     } finally {
@@ -126,24 +261,72 @@ export default function Dashboard({
     }
   }
 
-  const effectiveAmount = challenge.effective_amount_cents
-  const dailyRisk = Math.round(effectiveAmount / 7)
+  if (challengeLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 60 }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: 15 }}>Loading…</span>
+      </div>
+    )
+  }
+
+  if (challengeError) {
+    return (
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px', textAlign: 'center', color: 'var(--color-danger)' }}>
+        {challengeError}
+      </div>
+    )
+  }
+
+  if (!challenge) {
+    return <EmptyState profile={profile} onStartChallenge={onStartChallenge} />
+  }
+
+  if (challenge.status === 'completed') {
+    return <CompletedSummary challenge={challenge} dailyLogs={dailyLogs} onStartChallenge={onStartChallenge} />
+  }
+
+  // Active challenge
+  const today = new Date().toISOString().split('T')[0]
+  const todayLog = dailyLogs.find(l => l.log_date === today)
+  const currentSteps = steps ?? 0
+  const dailyGoal = challenge.daily_goal
+  const stepsRemaining = Math.max(0, dailyGoal - currentSteps)
+  const minutesRemaining = Math.round(stepsRemaining / 100)
+  const pct = dailyGoal > 0 ? Math.min(100, Math.round((currentSteps / dailyGoal) * 100)) : 0
+  const goalReached = currentSteps >= dailyGoal
+
+  let barColor = 'var(--color-primary)'
+  if (goalReached || todayLog?.goal_met || todayLog?.grace_day_used) barColor = 'var(--color-success)'
+
+  const failedDays = dailyLogs.filter(l => !l.goal_met && !l.grace_day_used).length
+  const moneyLostCents = Math.round((failedDays / 7) * challenge.effective_amount_cents)
+  const dailyRiskCents = Math.round(challenge.effective_amount_cents / 7)
+
+  const graceDaysLeft = challenge.grace_days - challenge.grace_days_used
+  const canUseGraceDay = (
+    graceDaysLeft > 0 &&
+    !todayLog?.grace_day_used &&
+    !todayLog?.goal_met &&
+    !goalReached &&
+    today >= challenge.start_date &&
+    today <= challenge.end_date
+  )
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '20px 16px 40px' }}>
 
-      {/* ── Section 1: Today's progress ── */}
+      {/* ── Steps today ── */}
       <div className="card" style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontSize: 52, fontWeight: 800, color: barColor, letterSpacing: -2, lineHeight: 1 }}>
-              {currentSteps.toLocaleString()}
+              {stepsLoading && steps === null ? '…' : currentSteps.toLocaleString()}
             </div>
             <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4 }}>steps today</div>
           </div>
           <button
             className="btn"
-            onClick={onRefetchSteps}
+            onClick={fetchSteps}
             disabled={stepsLoading}
             style={{ background: 'var(--color-border)', color: 'var(--color-text)', padding: '6px 12px', fontSize: 12 }}
           >
@@ -158,74 +341,57 @@ export default function Dashboard({
           <span>{dailyGoal.toLocaleString()} steps</span>
         </div>
 
-        {!todayDone && !todayClosed && (
-          <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-warning)' }}>
-            ~{remaining.toLocaleString()} more steps (~{minutesEstimate} min)
+        {!goalReached && !todayLog?.goal_met && !todayLog?.grace_day_used && steps !== null && (
+          <div style={{ marginTop: 10, fontSize: 14, color: 'var(--color-warning)' }}>
+            ~{stepsRemaining.toLocaleString()} more steps (~{minutesRemaining} min)
           </div>
         )}
-        {todayDone && (
-          <div style={{ marginTop: 12, fontSize: 14, color: 'var(--color-success)', fontWeight: 600 }}>
+        {(goalReached || todayLog?.goal_met) && (
+          <div style={{ marginTop: 10, fontSize: 14, color: 'var(--color-success)', fontWeight: 600 }}>
             ✅ Goal reached!
           </div>
         )}
         {stepsError && (
-          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-danger)' }}>
-            {stepsError}
-          </div>
+          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--color-danger)' }}>{stepsError}</div>
         )}
       </div>
 
-      {/* ── Section 2: Week view ── */}
+      {/* ── Week view ── */}
       <div className="card" style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-          {weekDays.map(({ dateStr, label, log, isToday, isFuture }) => {
-            let symbol = '⚪'
-            if (log?.goal_met || log?.grace_day_used) symbol = '✅'
-            else if (log && !log.goal_met && !log.grace_day_used) symbol = '❌'
-            else if (isToday) symbol = '🔵'
-            return (
-              <div key={dateStr} style={{ textAlign: 'center', flex: 1 }}>
-                <div style={{ fontSize: 18 }}>{symbol}</div>
-                <div style={{
-                  fontSize: 10, marginTop: 4,
-                  color: isToday ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                  fontWeight: isToday ? 700 : 400,
-                }}>
-                  {label}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        {logsLoading ? (
+          <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>Loading…</div>
+        ) : (
+          <WeekView challenge={challenge} dailyLogs={dailyLogs} />
+        )}
       </div>
 
-      {/* ── Section 3: Stats ── */}
+      {/* ── Money at risk ── */}
       <div className="card" style={{ marginBottom: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, textAlign: 'center' }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 700 }}>{fmt(effectiveAmount)}</div>
+            <div style={{ fontSize: 20, fontWeight: 700 }}>{eur(challenge.effective_amount_cents)}</div>
             <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>At stake</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-danger)' }}>{fmt(dailyRisk)}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Today's risk</div>
           </div>
           <div>
             <div style={{
               fontSize: 20, fontWeight: 700,
-              color: graceDaysRemaining > 0 ? 'var(--color-warning)' : 'var(--color-text-secondary)',
+              color: moneyLostCents > 0 ? 'var(--color-danger)' : 'var(--color-text)',
             }}>
-              {graceDaysRemaining}
+              {eur(moneyLostCents)}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Grace days left</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Lost so far</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-warning)' }}>{eur(dailyRiskCents)}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Today's risk</div>
           </div>
         </div>
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--color-border)', fontSize: 12, color: 'var(--color-text-secondary)' }}>
-          Week of {challenge.start_date} – {challenge.end_date}
+          {challenge.start_date} – {challenge.end_date} · {graceDaysLeft} grace {graceDaysLeft === 1 ? 'day' : 'days'} left
         </div>
       </div>
 
-      {/* ── Section 4: Actions ── */}
+      {/* ── Grace day ── */}
       {canUseGraceDay && (
         <div className="card" style={{ marginBottom: 12 }}>
           <button
@@ -238,13 +404,15 @@ export default function Dashboard({
             {graceDayLoading ? 'Using grace day…' : '🛡 Use grace day'}
           </button>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 8, textAlign: 'center' }}>
-            Counts as completing today. {graceDaysRemaining - 1} grace {graceDaysRemaining - 1 === 1 ? 'day' : 'days'} remaining after this.
+            Counts as completing today. {graceDaysLeft - 1} grace {graceDaysLeft - 1 === 1 ? 'day' : 'days'} remaining after this.
           </p>
-          {graceDayError && <p style={{ color: 'var(--color-danger)', fontSize: 13, marginTop: 8 }}>{graceDayError}</p>}
+          {graceDayError && (
+            <p style={{ color: 'var(--color-danger)', fontSize: 13, marginTop: 8 }}>{graceDayError}</p>
+          )}
         </div>
       )}
 
-      {/* ── Section 5: iOS Setup ── */}
+      {/* ── iOS Setup ── */}
       <IOSSetup />
     </div>
   )

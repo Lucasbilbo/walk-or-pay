@@ -18,7 +18,8 @@
       "bundleIdentifier": "com.walkorpay.app",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Walk or Pay reads your step count to verify your daily challenge.",
-        "NSHealthUpdateUsageDescription": "Walk or Pay needs access to your health data."
+        "NSHealthUpdateUsageDescription": "Walk or Pay needs access to your health data.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -40,6 +41,11 @@
           "NSHealthUpdateUsageDescription": "Walk or Pay needs access to your health data."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "68f3fa5e-de7e-4d3c-abb7-9eab0879884c"
+      }
+    }
   }
 }

@@ -1,10 +1,16 @@
 /**
  * daily-snapshot — Netlify Scheduled Function
- * Runs at 00:05 UTC every day (cron: "5 0 * * *")
+ * Cron: "5 0 * * *" (00:05 UTC every day)
  * Defined in netlify.toml: [functions."daily-snapshot"] schedule = "5 0 * * *"
  */
 const https = require('https')
 const { closeChallengeById } = require('./close-challenge')
+
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 
 function withTimeout(promise, ms) {
   const timer = new Promise((_, reject) =>
@@ -29,7 +35,7 @@ function supabaseGet(supabaseUrl, serviceKey, path) {
   })
 }
 
-function supabaseInsert(supabaseUrl, serviceKey, table, body) {
+function supabaseUpsert(supabaseUrl, serviceKey, table, body) {
   const hostname = new URL(supabaseUrl).hostname
   const bodyStr = JSON.stringify(body)
   return new Promise((resolve) => {
@@ -48,22 +54,49 @@ function supabaseInsert(supabaseUrl, serviceKey, table, body) {
   })
 }
 
-function getFitnessTokens(userId, supabaseUrl, serviceKey) {
+function supabasePatch(supabaseUrl, serviceKey, path, body) {
+  const hostname = new URL(supabaseUrl).hostname
+  const bodyStr = JSON.stringify(body)
   return new Promise((resolve) => {
-    const hostname = new URL(supabaseUrl).hostname
     const req = https.request({
-      hostname,
-      path: `/rest/v1/fitness_tokens?user_id=eq.${encodeURIComponent(userId)}&select=access_token,refresh_token,expires_at`,
-      method: 'GET',
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+      hostname, path: `/rest/v1/${path}`, method: 'PATCH',
+      headers: {
+        apikey: serviceKey, Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr),
+        Prefer: 'return=minimal',
+      },
+    }, (res) => { res.on('data', () => {}); res.on('end', () => resolve(res.statusCode)) })
+    req.on('error', () => resolve(500))
+    req.write(bodyStr)
+    req.end()
+  })
+}
+
+function refreshGoogleToken(clientId, clientSecret, refreshToken) {
+  const params = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type: 'refresh_token',
+  }).toString()
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'oauth2.googleapis.com', path: '/token', method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(params),
+      },
     }, (res) => {
       let d = ''
       res.on('data', c => d += c)
       res.on('end', () => {
-        try { const arr = JSON.parse(d); resolve(Array.isArray(arr) ? arr[0] : null) } catch { resolve(null) }
+        try { resolve({ status: res.statusCode, body: JSON.parse(d) }) }
+        catch { reject(new Error('Token refresh parse error')) }
       })
     })
-    req.on('error', () => resolve(null))
+    req.on('error', reject)
+    req.write(params)
     req.end()
   })
 }
@@ -88,7 +121,10 @@ function fetchGoogleFitSteps(accessToken, startMs, endMs) {
     }, (res) => {
       let d = ''
       res.on('data', c => d += c)
-      res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }) } catch { reject(new Error('Parse error')) } })
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(d) }) }
+        catch { reject(new Error('Google Fit parse error')) }
+      })
     })
     req.on('error', reject)
     req.write(bodyStr)
@@ -96,21 +132,70 @@ function fetchGoogleFitSteps(accessToken, startMs, endMs) {
   })
 }
 
-async function getStepsForUser(userId, date, supabaseUrl, serviceKey) {
-  const tokens = await getFitnessTokens(userId, supabaseUrl, serviceKey)
-  if (!tokens?.access_token) return null
+async function getStepsForUser(userId, date, supabaseUrl, serviceKey, googleClientId, googleClientSecret) {
+  // Load fitness tokens
+  const rows = await withTimeout(
+    supabaseGet(supabaseUrl, serviceKey,
+      `fitness_tokens?user_id=eq.${encodeURIComponent(userId)}&select=access_token,refresh_token,expires_at`),
+    5000
+  )
+  const tokenRow = Array.isArray(rows) ? rows[0] : null
+  if (!tokenRow?.access_token) return null
 
+  let { access_token, refresh_token, expires_at } = tokenRow
+
+  // Refresh if expires within 1 minute
+  const expiresAtMs = new Date(expires_at).getTime()
+  const nowMs = Date.now()
+  if (expiresAtMs - nowMs < 60_000) {
+    if (!refresh_token || !googleClientId || !googleClientSecret) {
+      console.error(`[daily-snapshot] Cannot refresh token for user ${userId} — missing credentials`)
+      return null
+    }
+    try {
+      const refreshRes = await withTimeout(
+        refreshGoogleToken(googleClientId, googleClientSecret, refresh_token),
+        5000
+      )
+      if (refreshRes.status !== 200 || !refreshRes.body.access_token) {
+        console.error(`[daily-snapshot] Token refresh failed for user ${userId}: ${refreshRes.status}`)
+        return null
+      }
+      access_token = refreshRes.body.access_token
+      const newExpiresAt = new Date(nowMs + refreshRes.body.expires_in * 1000).toISOString()
+      // Persist refreshed token — never expose in response
+      await withTimeout(
+        supabasePatch(supabaseUrl, serviceKey,
+          `fitness_tokens?user_id=eq.${encodeURIComponent(userId)}`,
+          { access_token, expires_at: newExpiresAt }
+        ),
+        5000
+      )
+    } catch (e) {
+      console.error(`[daily-snapshot] Token refresh error for user ${userId}:`, e.message)
+      return null
+    }
+  }
+
+  // Fetch steps from Google Fit
   const startMs = new Date(date + 'T00:00:00Z').getTime()
   const endMs = new Date(date + 'T23:59:59.999Z').getTime()
-
   let fitRes
   try {
-    fitRes = await withTimeout(fetchGoogleFitSteps(tokens.access_token, startMs, endMs), 5000)
-  } catch {
+    fitRes = await withTimeout(fetchGoogleFitSteps(access_token, startMs, endMs), 5000)
+  } catch (e) {
+    console.error(`[daily-snapshot] Google Fit request failed for user ${userId}:`, e.message)
     return null
   }
 
-  if (fitRes.status !== 200) return null
+  if (fitRes.status === 401) {
+    console.error(`[daily-snapshot] Google Fit 401 for user ${userId} — token invalid`)
+    return null
+  }
+  if (fitRes.status !== 200) {
+    console.error(`[daily-snapshot] Google Fit ${fitRes.status} for user ${userId}`)
+    return null
+  }
 
   let steps = 0
   for (const bucket of (fitRes.body.bucket || [])) {
@@ -126,17 +211,20 @@ async function getStepsForUser(userId, date, supabaseUrl, serviceKey) {
 }
 
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' }
+
   const SUPABASE_URL = process.env.SUPABASE_URL
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
   const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
+  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
+  const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !STRIPE_SECRET_KEY) {
-    console.error('[daily-snapshot] Server misconfigured — missing env vars')
-    return { statusCode: 500, body: 'Server misconfigured' }
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[daily-snapshot] Missing required env vars')
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server misconfigured' }) }
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  // yesterday in UTC
+  // Yesterday in UTC
   const yesterdayDate = new Date()
   yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1)
   const yesterday = yesterdayDate.toISOString().split('T')[0]
@@ -148,41 +236,46 @@ exports.handler = async (event) => {
   try {
     activeChallenges = await withTimeout(
       supabaseGet(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-        'challenges?status=eq.active&select=*'),
+        'challenges?status=eq.active&select=id,user_id,daily_goal,end_date,amount_cents,effective_amount_cents,stripe_payment_intent_id,welcome_bonus_applied,grace_days,grace_days_used'),
       5000
     )
   } catch (e) {
     console.error('[daily-snapshot] Failed to load challenges:', e.message)
-    return { statusCode: 500, body: 'Failed to load challenges' }
+    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Failed to load challenges' }) }
   }
 
   if (!Array.isArray(activeChallenges) || activeChallenges.length === 0) {
     console.log('[daily-snapshot] No active challenges')
-    return { statusCode: 200, body: JSON.stringify({ processed: 0 }) }
+    return { statusCode: 200, headers: CORS, body: JSON.stringify({ processed: 0, errors: 0, failed_challenge_ids: [] }) }
   }
 
   console.log('[daily-snapshot] Processing', activeChallenges.length, 'challenges')
+
   let processed = 0
-  let closed = 0
+  let errors = 0
+  const failedChallengeIds = []
 
   for (const challenge of activeChallenges) {
     try {
-      // Check if daily_log for yesterday already exists
+      // Check if a daily_log for yesterday already exists
       const existingLogs = await withTimeout(
         supabaseGet(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-          `daily_logs?challenge_id=eq.${challenge.id}&log_date=eq.${yesterday}&select=id`),
+          `daily_logs?challenge_id=eq.${encodeURIComponent(challenge.id)}&log_date=eq.${yesterday}&select=id`),
         5000
       )
       const logExists = Array.isArray(existingLogs) && existingLogs.length > 0
 
       if (!logExists) {
-        // Fetch steps from Google Fit using service role (tokens stored server-side)
-        const steps = await getStepsForUser(challenge.user_id, yesterday, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+        const steps = await getStepsForUser(
+          challenge.user_id, yesterday,
+          SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+          GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+        )
         const stepCount = steps ?? 0
         const goalMet = stepCount >= challenge.daily_goal
 
         await withTimeout(
-          supabaseInsert(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'daily_logs', {
+          supabaseUpsert(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'daily_logs', {
             challenge_id: challenge.id,
             user_id: challenge.user_id,
             log_date: yesterday,
@@ -193,24 +286,33 @@ exports.handler = async (event) => {
           5000
         )
         console.log(`[daily-snapshot] Logged ${stepCount} steps for challenge ${challenge.id} on ${yesterday} — goal_met: ${goalMet}`)
+      } else {
+        console.log(`[daily-snapshot] Log already exists for challenge ${challenge.id} on ${yesterday}, skipping`)
       }
 
       // Close challenge if yesterday was the end date
       if (challenge.end_date === yesterday) {
-        await closeChallengeById(challenge.id, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY)
-        console.log(`[daily-snapshot] Closed challenge ${challenge.id}`)
-        closed++
+        if (!STRIPE_SECRET_KEY) {
+          console.error(`[daily-snapshot] Cannot close challenge ${challenge.id} — STRIPE_SECRET_KEY missing`)
+        } else {
+          await closeChallengeById(challenge.id, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY)
+          console.log(`[daily-snapshot] Closed challenge ${challenge.id}`)
+        }
       }
 
       processed++
     } catch (e) {
       console.error(`[daily-snapshot] Error processing challenge ${challenge.id}:`, e.message)
+      errors++
+      failedChallengeIds.push(challenge.id)
     }
   }
 
-  console.log(`[daily-snapshot] Done — processed: ${processed}, closed: ${closed}`)
+  const summary = { processed, errors, failed_challenge_ids: failedChallengeIds }
+  console.log('[daily-snapshot] Done —', JSON.stringify(summary))
   return {
     statusCode: 200,
-    body: JSON.stringify({ processed, closed }),
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+    body: JSON.stringify(summary),
   }
 }

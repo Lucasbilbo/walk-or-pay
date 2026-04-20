@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
-import { useChallenge } from './hooks/useChallenge'
-import { useSteps } from './hooks/useSteps'
 import { supabase } from './lib/supabase'
 import AuthScreen from './components/AuthScreen'
 import ConnectFitness from './components/ConnectFitness'
@@ -15,14 +13,6 @@ export default function App() {
   const [profile, setProfile] = useState(null)
   const [profileLoading, setProfileLoading] = useState(true)
   const [hasFitnessToken, setHasFitnessToken] = useState(null) // null = unknown
-
-  const { challenge, dailyLogs, loading: challengeLoading, refetch: refetchChallenge } = useChallenge(user?.id)
-
-  // If today's daily_log already has steps (e.g. from iOS Shortcut), use them directly
-  const today = new Date().toISOString().split('T')[0]
-  const todayLogSteps = dailyLogs.find(l => l.log_date === today)?.steps ?? null
-
-  const { steps, loading: stepsLoading, error: stepsError, refetch: refetchSteps } = useSteps(!!hasFitnessToken, todayLogSteps)
 
   // Load profile — NEVER run queries inside onAuthStateChange, use useEffect on user
   useEffect(() => {
@@ -95,10 +85,7 @@ export default function App() {
       <CreateChallenge
         welcomeBonusUsed={profile?.welcome_bonus_used ?? false}
         onBack={() => setScreen('dashboard')}
-        onSuccess={() => {
-          setScreen('dashboard')
-          refetchChallenge()
-        }}
+        onSuccess={() => setScreen('dashboard')}
       />
     )
   }
@@ -118,15 +105,9 @@ export default function App() {
       </nav>
 
       <Dashboard
-        challenge={challengeLoading ? null : challenge}
-        dailyLogs={dailyLogs}
-        steps={steps}
-        stepsLoading={stepsLoading}
-        stepsError={stepsError}
-        onRefetchSteps={refetchSteps}
-        onStartChallenge={() => setScreen('create-challenge')}
+        user={user}
         profile={profile}
-        onRefetchChallenge={refetchChallenge}
+        onStartChallenge={() => setScreen('create-challenge')}
       />
     </div>
   )

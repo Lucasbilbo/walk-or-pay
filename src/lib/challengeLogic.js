@@ -61,3 +61,14 @@ export function isGoalMet(steps, dailyGoal) {
 export function calculateRefund(amountCents, penaltyCents) {
   return Math.max(0, amountCents - Math.min(penaltyCents, amountCents))
 }
+
+/**
+ * Count failed days from daily_logs array.
+ * A day fails when goal_met=false AND grace_day_used=false.
+ * Grace days and goal-met days never count as failed.
+ * @param {Array<{ goal_met: boolean, grace_day_used: boolean }>} logs
+ * @returns {number}
+ */
+export function countFailedDays(logs) {
+  return logs.filter(l => !l.goal_met && !l.grace_day_used).length
+}
