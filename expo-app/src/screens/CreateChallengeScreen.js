@@ -128,7 +128,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.selectedValue}>${amountEuros} at stake for 7 days</Text>
+          <Text style={styles.selectedValue}>€{amountEuros} at stake for 7 days</Text>
           <TouchableOpacity style={styles.nextButton} onPress={goNext}>
             <Text style={styles.nextButtonText}>Continue →</Text>
           </TouchableOpacity>
@@ -185,7 +185,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
           </View>
           <View style={[styles.summaryRow, styles.summaryTotal]}>
             <Text style={styles.summaryLabelBold}>Total charge</Text>
-            <Text style={styles.summaryValueBold}>${amountEuros}.00</Text>
+            <Text style={styles.summaryValueBold}>€{amountEuros}.00</Text>
           </View>
 
           <Text style={styles.cardFieldLabel}>Card details</Text>
@@ -207,7 +207,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
             disabled={loading}
           >
             <Text style={styles.payButtonText}>
-              {loading ? 'Processing…' : `Pay $${amountEuros} & Start Challenge`}
+              {loading ? 'Processing…' : `Pay €${amountEuros} & Start Challenge`}
             </Text>
           </TouchableOpacity>
 

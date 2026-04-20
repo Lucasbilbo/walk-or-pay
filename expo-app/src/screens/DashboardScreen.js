@@ -192,7 +192,9 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
       }
       if (finalStatus !== 'granted') return
 
-      const pushToken = await Notifications.getExpoPushTokenAsync()
+      const pushToken = await Notifications.getExpoPushTokenAsync({
+        projectId: '68f3fa5e-de7e-4d3c-abb7-9eab0879884c',
+      })
       if (!pushToken?.data) return
 
       const { data: { session } } = await supabase.auth.getSession()
