@@ -21,7 +21,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
 
   const [step, setStep] = useState(1)
   const [dailyGoal, setDailyGoal] = useState(8000)
-  const [amountDollars, setAmountDollars] = useState(20)
+  const [amountEuros, setAmountEuros] = useState(20)
   const [graceDays, setGraceDays] = useState(0)
   const [loading, setLoading] = useState(false)
 
@@ -48,7 +48,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
         },
         body: JSON.stringify({
           daily_goal: dailyGoal,
-          amount_cents: amountDollars * 100,
+          amount_cents: amountEuros * 100,
           grace_days: graceDays,
         }),
       })
@@ -119,16 +119,16 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
             {AMOUNT_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt}
-                style={[styles.optionButton, amountDollars === opt && styles.optionSelected]}
-                onPress={() => setAmountDollars(opt)}
+                style={[styles.optionButton, amountEuros === opt && styles.optionSelected]}
+                onPress={() => setAmountEuros(opt)}
               >
-                <Text style={[styles.optionText, amountDollars === opt && styles.optionTextSelected]}>
+                <Text style={[styles.optionText, amountEuros === opt && styles.optionTextSelected]}>
                   ${opt}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.selectedValue}>${amountDollars} at stake for 7 days</Text>
+          <Text style={styles.selectedValue}>${amountEuros} at stake for 7 days</Text>
           <TouchableOpacity style={styles.nextButton} onPress={goNext}>
             <Text style={styles.nextButtonText}>Continue →</Text>
           </TouchableOpacity>
@@ -185,7 +185,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
           </View>
           <View style={[styles.summaryRow, styles.summaryTotal]}>
             <Text style={styles.summaryLabelBold}>Total charge</Text>
-            <Text style={styles.summaryValueBold}>${amountDollars}.00</Text>
+            <Text style={styles.summaryValueBold}>${amountEuros}.00</Text>
           </View>
 
           <Text style={styles.cardFieldLabel}>Card details</Text>
@@ -207,7 +207,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
             disabled={loading}
           >
             <Text style={styles.payButtonText}>
-              {loading ? 'Processing…' : `Pay $${amountDollars} & Start Challenge`}
+              {loading ? 'Processing…' : `Pay $${amountEuros} & Start Challenge`}
             </Text>
           </TouchableOpacity>
 
