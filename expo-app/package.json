@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@kingstinct/react-native-healthkit": "^14.0.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@stripe/stripe-react-native": "0.50.3",
     "@supabase/supabase-js": "^2.103.0",
     "expo": "~54.0.33",

@@ -1,18 +1,27 @@
 import { useState, useEffect } from 'react'
 import { View, ActivityIndicator, StyleSheet } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Linking from 'expo-linking'
 import { StripeProvider } from '@stripe/stripe-react-native'
 import { supabase } from './src/lib/supabase'
 import LoginScreen from './src/screens/LoginScreen'
 import DashboardScreen from './src/screens/DashboardScreen'
 import CreateChallengeScreen from './src/screens/CreateChallengeScreen'
+import OnboardingScreen from './src/screens/OnboardingScreen'
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [onboardingDone, setOnboardingDone] = useState(null) // null = unknown
   const [screen, setScreen] = useState('dashboard') // 'dashboard' | 'create-challenge'
+
+  useEffect(() => {
+    AsyncStorage.getItem('onboarding_complete').then(val => {
+      setOnboardingDone(val === 'true')
+    })
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -63,12 +72,16 @@ export default function App() {
     await supabase.auth.signOut()
   }
 
-  if (loading) {
+  if (loading || onboardingDone === null) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#1a1a1a" />
       </View>
     )
+  }
+
+  if (!onboardingDone) {
+    return <OnboardingScreen onDone={() => setOnboardingDone(true)} />
   }
 
   if (!user) {
