@@ -67,6 +67,33 @@ function supabaseInsert(supabaseUrl, serviceKey, table, body) {
   })
 }
 
+// Verify a Supabase JWT and return the user_id, or null if invalid
+function verifySupabaseJwt(supabaseUrl, serviceKey, token) {
+  const hostname = new URL(supabaseUrl).hostname
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname, path: '/auth/v1/user', method: 'GET',
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${token}`,
+      },
+    }, (res) => {
+      let d = ''
+      res.on('data', c => d += c)
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(d)
+          resolve(res.statusCode === 200 && parsed.id ? parsed.id : null)
+        } catch {
+          resolve(null)
+        }
+      })
+    })
+    req.on('error', () => resolve(null))
+    req.end()
+  })
+}
+
 function stripeRefund(secretKey, paymentIntentId, amountCents) {
   const params = new URLSearchParams({
     payment_intent: paymentIntentId,
@@ -84,7 +111,10 @@ function stripeRefund(secretKey, paymentIntentId, amountCents) {
     }, (res) => {
       let d = ''
       res.on('data', c => d += c)
-      res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }) } catch { reject(new Error('Parse error')) } })
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(d) }) }
+        catch { reject(new Error('Stripe parse error')) }
+      })
     })
     req.on('error', reject)
     req.write(params)
@@ -92,44 +122,47 @@ function stripeRefund(secretKey, paymentIntentId, amountCents) {
   })
 }
 
-// Internal helper — also exported for use from daily-snapshot
+// Exported for use from daily-snapshot
 async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKey) {
   // Load challenge
-  const challenges = await withTimeout(
+  const rows = await withTimeout(
     supabaseGet(supabaseUrl, serviceKey,
       `challenges?id=eq.${encodeURIComponent(challengeId)}&select=*`),
     5000
   )
-  const challenge = Array.isArray(challenges) ? challenges[0] : null
+  const challenge = Array.isArray(rows) ? rows[0] : null
   if (!challenge) throw new Error('Challenge not found')
   if (challenge.status !== 'active') throw new Error('Challenge is not active')
 
-  // Load all daily_logs for this challenge
+  // Load daily_logs — column is log_date, not date
   const logs = await withTimeout(
     supabaseGet(supabaseUrl, serviceKey,
-      `daily_logs?challenge_id=eq.${encodeURIComponent(challengeId)}&select=*`),
+      `daily_logs?challenge_id=eq.${encodeURIComponent(challengeId)}&select=log_date,goal_met,grace_day_used`),
     5000
   )
   const dailyLogs = Array.isArray(logs) ? logs : []
 
-  // Count failed days: goal_met = false AND grace_day_used = false
+  // Failed days: goal not met and no grace day used
   const failedDays = dailyLogs.filter(l => !l.goal_met && !l.grace_day_used).length
 
   const penaltyCents = Math.round((failedDays / 7) * challenge.effective_amount_cents)
   const refundCents = Math.max(0, challenge.amount_cents - Math.min(penaltyCents, challenge.amount_cents))
 
-  // Issue Stripe refund if applicable
+  // Stripe refund
   if (refundCents > 0 && challenge.stripe_payment_intent_id && stripeKey) {
     try {
-      await withTimeout(stripeRefund(stripeKey, challenge.stripe_payment_intent_id, refundCents), 5000)
-      console.log(`[close-challenge] Refunded ${refundCents} cents for challenge ${challengeId}`)
+      const refund = await withTimeout(
+        stripeRefund(stripeKey, challenge.stripe_payment_intent_id, refundCents),
+        5000
+      )
+      console.log(`[close-challenge] Refunded ${refundCents} cents for challenge ${challengeId}, status: ${refund.status}`)
     } catch (e) {
       console.error(`[close-challenge] Stripe refund failed for ${challengeId}:`, e.message)
-      // Continue — don't block completion on refund failure
+      // Don't block completion on refund failure
     }
   }
 
-  // Record penalty in penalty_pool (even if 0, for audit trail)
+  // Record penalty in penalty_pool
   if (penaltyCents > 0) {
     await withTimeout(
       supabaseInsert(supabaseUrl, serviceKey, 'penalty_pool', {
@@ -141,16 +174,27 @@ async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKe
     )
   }
 
+  // Mark welcome_bonus_used on profiles if bonus was applied — PK is id
+  if (challenge.welcome_bonus_applied) {
+    await withTimeout(
+      supabasePatch(supabaseUrl, serviceKey,
+        `profiles?user_id=eq.${encodeURIComponent(challenge.user_id)}`,
+        { welcome_bonus_used: true }
+      ),
+      5000
+    )
+  }
+
   // Mark challenge completed
   await withTimeout(
     supabasePatch(supabaseUrl, serviceKey,
-      `challenges?id=eq.${encodeURIComponent(challengeId)}`, {
-        status: 'completed',
-        penalty_cents: penaltyCents,
-      }),
+      `challenges?id=eq.${encodeURIComponent(challengeId)}`,
+      { status: 'completed', penalty_cents: penaltyCents }
+    ),
     5000
   )
 
+  console.log(`[close-challenge] Closed challenge ${challengeId}: failedDays=${failedDays}, penalty=${penaltyCents}, refund=${refundCents}`)
   return { failed_days: failedDays, penalty_cents: penaltyCents, refund_cents: refundCents }
 }
 
@@ -163,20 +207,16 @@ exports.handler = async (event) => {
   const SUPABASE_URL = process.env.SUPABASE_URL
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
   const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
+  const INTERNAL_SECRET = process.env.INTERNAL_SECRET
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !STRIPE_SECRET_KEY) {
     return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'Server misconfigured' }) }
   }
 
-  // Accept either user JWT or service role key (for internal calls from daily-snapshot)
   const authHeader = event.headers['authorization'] || ''
   const token = authHeader.replace(/^Bearer\s+/i, '').trim()
-
-  const isInternalCall = token === SUPABASE_SERVICE_ROLE_KEY
-  if (!isInternalCall) {
-    // Validate as user JWT — only the challenge owner can close their own challenge
-    // (Future: add user_id verification against challenge.user_id)
-    if (!token) return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) }
+  if (!token) {
+    return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) }
   }
 
   let parsed
@@ -191,6 +231,39 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'challenge_id required' }) }
   }
 
+  // Two-lane auth: internal secret or user JWT
+  const isInternal = INTERNAL_SECRET && token === INTERNAL_SECRET
+
+  if (!isInternal) {
+    // Verify JWT and check ownership
+    let callerId
+    try {
+      callerId = await withTimeout(
+        verifySupabaseJwt(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, token),
+        5000
+      )
+    } catch {
+      return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) }
+    }
+    if (!callerId) {
+      return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) }
+    }
+
+    // Verify the challenge belongs to this user
+    const rows = await withTimeout(
+      supabaseGet(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+        `challenges?id=eq.${encodeURIComponent(challenge_id)}&select=user_id`),
+      5000
+    )
+    const challenge = Array.isArray(rows) ? rows[0] : null
+    if (!challenge) {
+      return { statusCode: 404, headers: CORS, body: JSON.stringify({ error: 'Challenge not found' }) }
+    }
+    if (challenge.user_id !== callerId) {
+      return { statusCode: 403, headers: CORS, body: JSON.stringify({ error: 'Forbidden' }) }
+    }
+  }
+
   try {
     const result = await closeChallengeById(
       challenge_id, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY
@@ -202,7 +275,9 @@ exports.handler = async (event) => {
     }
   } catch (e) {
     console.error('[close-challenge] Error:', e.message)
-    const status = e.message.includes('not found') ? 404 : e.message.includes('not active') ? 400 : 500
+    const status = e.message.includes('not found') ? 404
+      : e.message.includes('not active') ? 400
+      : 500
     return { statusCode: status, headers: CORS, body: JSON.stringify({ error: e.message }) }
   }
 }

@@ -7,10 +7,15 @@ import {
   ScrollView,
   Alert,
 } from 'react-native'
-import { queryQuantitySamples, requestAuthorization } from '@kingstinct/react-native-healthkit'
+import { queryStatisticsForQuantity, requestAuthorization } from '@kingstinct/react-native-healthkit'
 import { supabase, SHORTCUT_LOG_URL } from '../lib/supabase'
 
 const API_BASE = 'https://walk-or-pay.netlify.app/.netlify/functions'
+
+function getLocalDateString() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function getWeekDates(startDate) {
@@ -25,7 +30,7 @@ function getWeekDates(startDate) {
 }
 
 function WeekView({ challenge, dailyLogs }) {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString()
   const weekDates = getWeekDates(challenge.start_date)
 
   return (
@@ -83,12 +88,20 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
         const now = new Date()
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
 
-        const samples = await queryQuantitySamples(
+        const stats = await queryStatisticsForQuantity(
           'HKQuantityTypeIdentifierStepCount',
-          { from: startOfDay, to: now }
+          ['cumulativeSum'],
+          {
+            unit: 'count',
+            filter: {
+              date: {
+                startDate: startOfDay,
+                endDate: now,
+              },
+            },
+          }
         )
-        const totalSteps = samples.reduce((sum, s) => sum + (s.quantity || 0), 0)
-        setSteps(Math.round(totalSteps))
+        setSteps(Math.round(stats.sumQuantity?.quantity ?? 0))
       } catch (e) {
         console.log('[HealthKit] not available yet:', e.message)
         setSteps(0)
@@ -144,12 +157,20 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
     try {
       const now = new Date()
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
-      const samples = await queryQuantitySamples('HKQuantityTypeIdentifierStepCount', {
-        from: startOfDay,
-        to: now,
-      })
-      const totalSteps = samples.reduce((sum, s) => sum + (s.quantity || 0), 0)
-      setSteps(Math.round(totalSteps))
+      const stats = await queryStatisticsForQuantity(
+        'HKQuantityTypeIdentifierStepCount',
+        ['cumulativeSum'],
+        {
+          unit: 'count',
+          filter: {
+            date: {
+              startDate: startOfDay,
+              endDate: now,
+            },
+          },
+        }
+      )
+      setSteps(Math.round(stats.sumQuantity?.quantity ?? 0))
     } catch (e) {
       console.log('[HealthKit] refresh error:', e.message)
     }
@@ -173,7 +194,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
 
     setSyncing(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDateString()
       const res = await fetch(SHORTCUT_LOG_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -201,7 +222,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
 
     setGraceDayLoading(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDateString()
       const res = await fetch(`${API_BASE}/use-grace-day`, {
         method: 'POST',
         headers: {
@@ -223,7 +244,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString()
   const goalMet = challenge && steps !== null && steps >= challenge.daily_goal
   const stepsRemaining = challenge && steps !== null
     ? Math.max(0, challenge.daily_goal - steps)
@@ -318,7 +339,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
             <Text style={styles.cardLabel}>CHALLENGE STATS</Text>
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>${dailyRisk}</Text>
+                <Text style={styles.statValue}>€{dailyRisk}</Text>
                 <Text style={styles.statLabel}>Today's risk</Text>
               </View>
               <View style={styles.statDivider} />
