@@ -132,6 +132,24 @@ function fetchGoogleFitSteps(accessToken, startMs, endMs) {
   })
 }
 
+function sendPushNotification(pushToken, title, body) {
+  const bodyStr = JSON.stringify({ to: pushToken, title, body })
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'exp.host',
+      path: '/--/api/v2/push/send',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr),
+      },
+    }, (res) => { res.on('data', () => {}); res.on('end', () => resolve(res.statusCode)) })
+    req.on('error', reject)
+    req.write(bodyStr)
+    req.end()
+  })
+}
+
 async function getStepsForUser(userId, date, supabaseUrl, serviceKey, googleClientId, googleClientSecret) {
   // Load fitness tokens
   const rows = await withTimeout(
@@ -286,6 +304,32 @@ exports.handler = async (event) => {
           5000
         )
         console.log(`[daily-snapshot] Logged ${stepCount} steps for challenge ${challenge.id} on ${yesterday} — goal_met: ${goalMet}`)
+
+        // Push notification if below 70% of goal
+        if (!goalMet && stepCount < challenge.daily_goal * 0.7) {
+          try {
+            const profileRows = await withTimeout(
+              supabaseGet(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+                `profiles?user_id=eq.${encodeURIComponent(challenge.user_id)}&select=push_token`),
+              5000
+            )
+            const pushToken = Array.isArray(profileRows) ? profileRows[0]?.push_token : null
+            if (pushToken) {
+              const minutesLeft = Math.round((challenge.daily_goal - stepCount) / 100)
+              await withTimeout(
+                sendPushNotification(
+                  pushToken,
+                  'Keep walking!',
+                  `You need ${minutesLeft} more minutes — don't lose your money`
+                ),
+                5000
+              )
+              console.log(`[daily-snapshot] Push sent to user ${challenge.user_id}`)
+            }
+          } catch (e) {
+            console.error(`[daily-snapshot] Push notification failed for ${challenge.id}:`, e.message)
+          }
+        }
       } else {
         console.log(`[daily-snapshot] Log already exists for challenge ${challenge.id} on ${yesterday}, skipping`)
       }

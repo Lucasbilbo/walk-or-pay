@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native'
 import { queryStatisticsForQuantity, requestAuthorization } from '@kingstinct/react-native-healthkit'
+import * as Notifications from 'expo-notifications'
 import { supabase, SHORTCUT_LOG_URL } from '../lib/supabase'
 
 const API_BASE = 'https://walk-or-pay.netlify.app/.netlify/functions'
@@ -46,31 +47,31 @@ function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) 
 
       <View style={[styles.card, { alignItems: 'center', paddingVertical: 28 }]}>
         <Text style={styles.completedEmoji}>🏁</Text>
-        <Text style={styles.completedTitle}>Reto completado</Text>
+        <Text style={styles.completedTitle}>Challenge completed</Text>
         <Text style={styles.completedSubtitle}>{challenge.start_date} – {challenge.end_date}</Text>
       </View>
 
       <View style={styles.card}>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Días cumplidos</Text>
+          <Text style={styles.summaryLabel}>Days completed</Text>
           <Text style={styles.summaryValue}>{completedDays} / 7</Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Días fallados</Text>
+          <Text style={styles.summaryLabel}>Days failed</Text>
           <Text style={[styles.summaryValue, failedDays > 0 && styles.textDanger]}>{failedDays} / 7</Text>
         </View>
         <View style={[styles.summaryRow, styles.summaryDivider]}>
-          <Text style={styles.summaryLabel}>Importe depositado</Text>
+          <Text style={styles.summaryLabel}>Amount deposited</Text>
           <Text style={styles.summaryValue}>{(challenge.amount_cents / 100).toFixed(2)} €</Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Penalización</Text>
+          <Text style={styles.summaryLabel}>Penalty</Text>
           <Text style={[styles.summaryValue, penaltyCents > 0 && styles.textDanger]}>
             {(penaltyCents / 100).toFixed(2)} €
           </Text>
         </View>
         <View style={[styles.summaryRow, { marginTop: 4 }]}>
-          <Text style={styles.summaryLabelBold}>Importe devuelto</Text>
+          <Text style={styles.summaryLabelBold}>Amount refunded</Text>
           <Text style={[styles.summaryValueBold, styles.textSuccess]}>
             {(refundCents / 100).toFixed(2)} €
           </Text>
@@ -80,13 +81,13 @@ function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) 
       <View style={[styles.card, penaltyCents === 0 ? styles.cardSuccess : styles.cardWarning]}>
         <Text style={styles.completedMessage}>
           {penaltyCents === 0
-            ? '¡Reto completado sin penalización! Se te devolverá el importe completo.'
-            : 'Tu penalización será donada a una causa benéfica.'}
+            ? 'Challenge completed with no penalty! Your full deposit will be refunded.'
+            : 'Your penalty will be donated to a charitable cause.'}
         </Text>
       </View>
 
       <TouchableOpacity style={styles.startButton} onPress={onStartChallenge}>
-        <Text style={styles.startButtonText}>Crear nuevo reto →</Text>
+        <Text style={styles.startButtonText}>Start a new challenge →</Text>
       </TouchableOpacity>
     </ScrollView>
   )
@@ -174,6 +175,41 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
     }
     initHealth()
   }, [])
+
+  useEffect(() => {
+    if (challenge?.status === 'active') {
+      registerForPushNotifications()
+    }
+  }, [challenge?.id])
+
+  async function registerForPushNotifications() {
+    try {
+      const { status: existing } = await Notifications.getPermissionsAsync()
+      let finalStatus = existing
+      if (existing !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync()
+        finalStatus = status
+      }
+      if (finalStatus !== 'granted') return
+
+      const pushToken = await Notifications.getExpoPushTokenAsync()
+      if (!pushToken?.data) return
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      await fetch(`${API_BASE}/save-push-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ token: pushToken.data }),
+      })
+    } catch (e) {
+      console.log('[PushNotifications] registration failed:', e.message)
+    }
+  }
 
   async function loadChallenge() {
     setChallengeLoading(true)
