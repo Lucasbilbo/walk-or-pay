@@ -29,6 +29,69 @@ function getWeekDates(startDate) {
   return dates
 }
 
+function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) {
+  const failedDays = dailyLogs.filter(l => !l.goal_met && !l.grace_day_used).length
+  const completedDays = 7 - failedDays
+  const penaltyCents = challenge.penalty_cents ?? 0
+  const refundCents = Math.max(0, challenge.amount_cents - penaltyCents)
+
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.logo}>Walk or Pay</Text>
+        <TouchableOpacity onPress={onSignOut}>
+          <Text style={styles.signOut}>Sign out</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.card, { alignItems: 'center', paddingVertical: 28 }]}>
+        <Text style={styles.completedEmoji}>🏁</Text>
+        <Text style={styles.completedTitle}>Reto completado</Text>
+        <Text style={styles.completedSubtitle}>{challenge.start_date} – {challenge.end_date}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Días cumplidos</Text>
+          <Text style={styles.summaryValue}>{completedDays} / 7</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Días fallados</Text>
+          <Text style={[styles.summaryValue, failedDays > 0 && styles.textDanger]}>{failedDays} / 7</Text>
+        </View>
+        <View style={[styles.summaryRow, styles.summaryDivider]}>
+          <Text style={styles.summaryLabel}>Importe depositado</Text>
+          <Text style={styles.summaryValue}>{(challenge.amount_cents / 100).toFixed(2)} €</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Penalización</Text>
+          <Text style={[styles.summaryValue, penaltyCents > 0 && styles.textDanger]}>
+            {(penaltyCents / 100).toFixed(2)} €
+          </Text>
+        </View>
+        <View style={[styles.summaryRow, { marginTop: 4 }]}>
+          <Text style={styles.summaryLabelBold}>Importe devuelto</Text>
+          <Text style={[styles.summaryValueBold, styles.textSuccess]}>
+            {(refundCents / 100).toFixed(2)} €
+          </Text>
+        </View>
+      </View>
+
+      <View style={[styles.card, penaltyCents === 0 ? styles.cardSuccess : styles.cardWarning]}>
+        <Text style={styles.completedMessage}>
+          {penaltyCents === 0
+            ? '¡Reto completado sin penalización! Se te devolverá el importe completo.'
+            : 'Tu penalización será donada a una causa benéfica.'}
+        </Text>
+      </View>
+
+      <TouchableOpacity style={styles.startButton} onPress={onStartChallenge}>
+        <Text style={styles.startButtonText}>Crear nuevo reto →</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  )
+}
+
 function WeekView({ challenge, dailyLogs }) {
   const today = getLocalDateString()
   const weekDates = getWeekDates(challenge.start_date)
@@ -116,9 +179,9 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
     setChallengeLoading(true)
     const { data: ch } = await supabase
       .from('challenges')
-      .select('id,daily_goal,status,start_date,end_date,amount_cents,effective_amount_cents,grace_days,grace_days_used')
+      .select('id,daily_goal,status,start_date,end_date,amount_cents,effective_amount_cents,grace_days,grace_days_used,penalty_cents')
       .eq('user_id', user.id)
-      .eq('status', 'active')
+      .in('status', ['active', 'completed'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -262,6 +325,17 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
   const dailyRisk = challenge
     ? (challenge.effective_amount_cents / 7 / 100).toFixed(2)
     : null
+
+  if (!challengeLoading && challenge?.status === 'completed') {
+    return (
+      <CompletedScreen
+        challenge={challenge}
+        dailyLogs={dailyLogs}
+        onSignOut={onSignOut}
+        onStartChallenge={onStartChallenge}
+      />
+    )
+  }
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
@@ -474,6 +548,26 @@ const styles = StyleSheet.create({
   },
   graceDayButtonDisabled: { opacity: 0.4 },
   graceDayText: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  // Completed screen
+  completedEmoji: { fontSize: 48, marginBottom: 10 },
+  completedTitle: { fontSize: 24, fontWeight: '800', color: '#1a1a1a', marginBottom: 4 },
+  completedSubtitle: { fontSize: 13, color: '#999' },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  summaryDivider: { marginTop: 8 },
+  summaryLabel: { fontSize: 14, color: '#888' },
+  summaryValue: { fontSize: 14, color: '#1a1a1a', fontWeight: '500' },
+  summaryLabelBold: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
+  summaryValueBold: { fontSize: 15, fontWeight: '800' },
+  textDanger: { color: '#ef4444' },
+  textSuccess: { color: '#16a34a' },
+  cardWarning: { borderColor: '#f59e0b', backgroundColor: '#fffbeb' },
+  completedMessage: { fontSize: 14, lineHeight: 20, color: '#1a1a1a', textAlign: 'center' },
   // No challenge
   noChallenge: { fontSize: 14, color: '#888', marginTop: 4, lineHeight: 20, marginBottom: 16 },
   startButton: {
