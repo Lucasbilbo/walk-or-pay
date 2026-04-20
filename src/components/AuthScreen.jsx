@@ -61,6 +61,11 @@ export default function AuthScreen({ onSignIn }) {
           </button>
         </form>
         {error && <p style={s.error}>{error}</p>}
+        <p style={s.footer}>
+          <a href="/privacy" style={s.footerLink}>Privacy Policy</a>
+          {' · '}
+          <a href="/terms" style={s.footerLink}>Terms of Service</a>
+        </p>
       </div>
     </div>
   )
@@ -81,4 +86,6 @@ const s = {
     color: 'var(--color-text)', fontSize: 15, fontFamily: 'inherit', outline: 'none',
   },
   error: { color: 'var(--color-danger)', fontSize: 13, marginTop: 12 },
+  footer: { marginTop: 24, fontSize: 12, color: 'var(--color-text-secondary)' },
+  footerLink: { color: 'var(--color-text-secondary)' },
 }
