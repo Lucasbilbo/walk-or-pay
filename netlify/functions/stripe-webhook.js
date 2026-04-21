@@ -187,11 +187,11 @@ exports.handler = async (event) => {
     )
     console.log(`[stripe-webhook] Activated challenge ${challenge.id}: ${toDateStr(startDate)} → ${toDateStr(endDate)}`)
 
-    // Ensure profile exists — PK is id, not user_id
+    // Ensure profile exists — PK is user_id
     // Only set welcome_bonus_used: false on insert; don't overwrite if already true
     await withTimeout(
       supabaseUpsert(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, 'profiles',
-        { id: challenge.user_id }
+        { user_id: challenge.user_id }
       ),
       5000
     )
