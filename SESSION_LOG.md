@@ -66,6 +66,23 @@ cd walk-or-pay && netlify dev
 cd expo-app && npx expo start --dev-client --tunnel
 ```
 
+## Session continued — same day
+
+### Additional features built
+- OnboardingScreen: 3-slide intro, shown only on first launch (AsyncStorage)
+- ProfileScreen: shows email, sign out, delete account (required by Apple)
+- delete-account.js: deletes all user data in correct FK order + removes auth user
+- HistoryScreen: lists all completed challenges with refund amounts
+- Loading states and error handling on all screens (DashboardScreen, CreateChallengeScreen, LoginScreen)
+- APP_STORE_LISTING.md created with full App Store copy
+
+### Next session priorities
+1. Run new EAS dev build (many screens changed since last build)
+2. Full flow test on iPhone with new build
+3. Switch Stripe to live mode
+4. EAS production build
+5. App Store Connect submission
+
 ### Known gotchas learned this session
 - Expo Go does NOT work — HealthKit uses NitroModules, requires EAS dev build
 - Mac disk space needed for local iOS build: 8-10GB minimum (use EAS if disk is full)
