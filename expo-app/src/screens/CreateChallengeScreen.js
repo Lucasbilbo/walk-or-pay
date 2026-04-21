@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from 'react-native'
 import { CardField, useStripe } from '@stripe/stripe-react-native'
 import { supabase } from '../lib/supabase'
@@ -55,7 +56,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
 
       const data = await res.json()
       if (!res.ok) {
-        Alert.alert('Error', data.error || 'Failed to create challenge')
+        Alert.alert('Error', 'Could not create challenge. Please try again.')
         return
       }
 
@@ -206,9 +207,10 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
             onPress={handlePay}
             disabled={loading}
           >
-            <Text style={styles.payButtonText}>
-              {loading ? 'Processing…' : `Pay €${amountEuros} & Start Challenge`}
-            </Text>
+            {loading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.payButtonText}>{`Pay €${amountEuros} & Start Challenge`}</Text>
+            }
           </TouchableOpacity>
 
           <Text style={styles.disclaimer}>

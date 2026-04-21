@@ -8,6 +8,7 @@ import LoginScreen from './src/screens/LoginScreen'
 import DashboardScreen from './src/screens/DashboardScreen'
 import CreateChallengeScreen from './src/screens/CreateChallengeScreen'
 import OnboardingScreen from './src/screens/OnboardingScreen'
+import ProfileScreen from './src/screens/ProfileScreen'
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
@@ -15,7 +16,7 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [onboardingDone, setOnboardingDone] = useState(null) // null = unknown
-  const [screen, setScreen] = useState('dashboard') // 'dashboard' | 'create-challenge'
+  const [screen, setScreen] = useState('dashboard') // 'dashboard' | 'create-challenge' | 'profile'
 
   useEffect(() => {
     AsyncStorage.getItem('onboarding_complete').then(val => {
@@ -95,11 +96,18 @@ export default function App() {
           onBack={() => setScreen('dashboard')}
           onSuccess={() => setScreen('dashboard')}
         />
+      ) : screen === 'profile' ? (
+        <ProfileScreen
+          user={user}
+          onSignOut={handleSignOut}
+          onBack={() => setScreen('dashboard')}
+        />
       ) : (
         <DashboardScreen
           user={user}
           onSignOut={handleSignOut}
           onStartChallenge={() => setScreen('create-challenge')}
+          onProfile={() => setScreen('profile')}
         />
       )}
     </StripeProvider>

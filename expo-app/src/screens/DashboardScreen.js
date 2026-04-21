@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native'
 import { queryStatisticsForQuantity, requestAuthorization } from '@kingstinct/react-native-healthkit'
 import * as Notifications from 'expo-notifications'
@@ -125,13 +126,14 @@ function WeekView({ challenge, dailyLogs }) {
   )
 }
 
-export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
+export default function DashboardScreen({ user, onSignOut, onStartChallenge, onProfile }) {
   const [steps, setSteps] = useState(null)
   const [stepsLoading, setStepsLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [challenge, setChallenge] = useState(null)
   const [dailyLogs, setDailyLogs] = useState([])
   const [challengeLoading, setChallengeLoading] = useState(true)
+  const [challengeError, setChallengeError] = useState(false)
   const [token, setToken] = useState(null)
   const [lastSyncedAt, setLastSyncedAt] = useState(null)
   const [graceDayLoading, setGraceDayLoading] = useState(false)
@@ -215,27 +217,35 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
 
   async function loadChallenge() {
     setChallengeLoading(true)
-    const { data: ch } = await supabase
-      .from('challenges')
-      .select('id,daily_goal,status,start_date,end_date,amount_cents,effective_amount_cents,grace_days,grace_days_used,penalty_cents')
-      .eq('user_id', user.id)
-      .in('status', ['active', 'completed'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    setChallengeError(false)
+    try {
+      const { data: ch, error: chErr } = await supabase
+        .from('challenges')
+        .select('id,daily_goal,status,start_date,end_date,amount_cents,effective_amount_cents,grace_days,grace_days_used,penalty_cents')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'completed'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-    setChallenge(ch ?? null)
+      if (chErr) throw chErr
 
-    if (ch) {
-      const { data: logs } = await supabase
-        .from('daily_logs')
-        .select('log_date,steps,goal_met,grace_day_used')
-        .eq('challenge_id', ch.id)
-        .order('log_date', { ascending: true })
-      setDailyLogs(logs ?? [])
+      setChallenge(ch ?? null)
+
+      if (ch) {
+        const { data: logs, error: logsErr } = await supabase
+          .from('daily_logs')
+          .select('log_date,steps,goal_met,grace_day_used')
+          .eq('challenge_id', ch.id)
+          .order('log_date', { ascending: true })
+        if (logsErr) throw logsErr
+        setDailyLogs(logs ?? [])
+      }
+    } catch {
+      setChallengeError(true)
+    } finally {
+      setChallengeLoading(false)
     }
-
-    setChallengeLoading(false)
   }
 
   async function loadToken() {
@@ -364,6 +374,26 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
     ? (challenge.effective_amount_cents / 7 / 100).toFixed(2)
     : null
 
+  if (challengeLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#1a1a1a" />
+      </View>
+    )
+  }
+
+  if (challengeError) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>Could not load your challenge.</Text>
+        <Text style={styles.errorSub}>Pull down to retry.</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadChallenge}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
   if (!challengeLoading && challenge?.status === 'completed') {
     return (
       <CompletedScreen
@@ -379,8 +409,8 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>Walk or Pay</Text>
-        <TouchableOpacity onPress={onSignOut}>
-          <Text style={styles.signOut}>Sign out</Text>
+        <TouchableOpacity onPress={onProfile}>
+          <Text style={styles.profileIcon}>👤</Text>
         </TouchableOpacity>
       </View>
 
@@ -497,6 +527,22 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge }) {
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    backgroundColor: '#f9f9f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  errorText: { fontSize: 16, fontWeight: '600', color: '#1a1a1a', textAlign: 'center', marginBottom: 6 },
+  errorSub: { fontSize: 14, color: '#888', textAlign: 'center', marginBottom: 20 },
+  retryButton: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+  },
+  retryButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   scroll: { flex: 1, backgroundColor: '#f9f9f9' },
   container: { padding: 20, paddingTop: 60 },
   header: {
@@ -507,6 +553,7 @@ const styles = StyleSheet.create({
   },
   logo: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.5 },
   signOut: { fontSize: 13, color: '#999' },
+  profileIcon: { fontSize: 22 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,

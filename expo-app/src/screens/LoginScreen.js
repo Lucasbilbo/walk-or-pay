@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native'
 import { supabase } from '../lib/supabase'
 console.log('[LoginScreen] supabase URL:', supabase.supabaseUrl)
@@ -85,9 +86,10 @@ export default function LoginScreen() {
           onPress={handleSendLink}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>
-            {loading ? 'Sending…' : 'Send magic link'}
-          </Text>
+          {loading
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={styles.buttonText}>Send magic link</Text>
+          }
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
