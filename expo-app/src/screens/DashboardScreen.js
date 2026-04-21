@@ -462,7 +462,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge, onP
         disabled={syncing || stepsLoading || steps === null}
       >
         <Text style={styles.syncButtonText}>
-          {syncing ? 'Syncing…' : 'Sync steps to Walk or Pay'}
+          {syncing ? 'Syncing…' : 'Sync steps'}
         </Text>
       </TouchableOpacity>
 
@@ -496,7 +496,9 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge, onP
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>{challenge.end_date}</Text>
+                <Text style={styles.statValue}>
+                  {new Date(challenge.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </Text>
                 <Text style={styles.statLabel}>Ends</Text>
               </View>
             </View>
@@ -599,14 +601,15 @@ const styles = StyleSheet.create({
   refreshButton: { marginTop: 10, alignSelf: 'flex-start' },
   refreshText: { fontSize: 13, color: '#888', textDecorationLine: 'underline' },
   syncButton: {
-    backgroundColor: '#1a1a1a',
+    borderWidth: 1.5,
+    borderColor: '#d0d0d0',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     alignItems: 'center',
     marginBottom: 8,
   },
   syncButtonDisabled: { opacity: 0.4 },
-  syncButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  syncButtonText: { color: '#555', fontSize: 14, fontWeight: '500' },
   syncedAt: { fontSize: 12, color: '#aaa', textAlign: 'center', marginBottom: 16 },
   // Week view
   weekRow: {

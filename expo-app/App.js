@@ -18,6 +18,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [onboardingDone, setOnboardingDone] = useState(null) // null = unknown
   const [screen, setScreen] = useState('dashboard') // 'dashboard' | 'create-challenge' | 'profile' | 'history'
+  const [dashboardKey, setDashboardKey] = useState(0)
 
   useEffect(() => {
     AsyncStorage.getItem('onboarding_complete').then(val => {
@@ -95,7 +96,7 @@ export default function App() {
       {screen === 'create-challenge' ? (
         <CreateChallengeScreen
           onBack={() => setScreen('dashboard')}
-          onSuccess={() => setScreen('dashboard')}
+          onSuccess={() => { setDashboardKey(k => k + 1); setScreen('dashboard') }}
         />
       ) : screen === 'profile' ? (
         <ProfileScreen
@@ -110,6 +111,7 @@ export default function App() {
         />
       ) : (
         <DashboardScreen
+          key={dashboardKey}
           user={user}
           onSignOut={handleSignOut}
           onStartChallenge={() => setScreen('create-challenge')}
