@@ -10,6 +10,9 @@
 [functions."daily-snapshot"]
   schedule = "5 0 * * *"
 
+[functions."evening-reminder"]
+  schedule = "0 17 * * *"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
