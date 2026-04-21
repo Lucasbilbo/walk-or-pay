@@ -124,7 +124,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
                 onPress={() => setAmountEuros(opt)}
               >
                 <Text style={[styles.optionText, amountEuros === opt && styles.optionTextSelected]}>
-                  ${opt}
+                  €{opt}
                 </Text>
               </TouchableOpacity>
             ))}

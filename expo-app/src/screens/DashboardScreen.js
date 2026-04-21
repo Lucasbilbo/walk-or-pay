@@ -14,6 +14,10 @@ import { supabase, SHORTCUT_LOG_URL } from '../lib/supabase'
 
 const API_BASE = 'https://walk-or-pay.netlify.app/.netlify/functions'
 
+function formatDate(d) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 function getLocalDateString() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -49,7 +53,7 @@ function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) 
       <View style={[styles.card, { alignItems: 'center', paddingVertical: 28 }]}>
         <Text style={styles.completedEmoji}>🏁</Text>
         <Text style={styles.completedTitle}>Challenge completed</Text>
-        <Text style={styles.completedSubtitle}>{challenge.start_date} – {challenge.end_date}</Text>
+        <Text style={styles.completedSubtitle}>{formatDate(challenge.start_date)} – {formatDate(challenge.end_date)}</Text>
       </View>
 
       <View style={styles.card}>
@@ -496,9 +500,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge, onP
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>
-                  {new Date(challenge.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </Text>
+                <Text style={styles.statValue}>{formatDate(challenge.end_date)}</Text>
                 <Text style={styles.statLabel}>Ends</Text>
               </View>
             </View>
