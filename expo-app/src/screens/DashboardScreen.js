@@ -126,7 +126,7 @@ function WeekView({ challenge, dailyLogs }) {
   )
 }
 
-export default function DashboardScreen({ user, onSignOut, onStartChallenge, onProfile }) {
+export default function DashboardScreen({ user, onSignOut, onStartChallenge, onProfile, onHistory }) {
   const [steps, setSteps] = useState(null)
   const [stepsLoading, setStepsLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -409,9 +409,14 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge, onP
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>Walk or Pay</Text>
-        <TouchableOpacity onPress={onProfile}>
-          <Text style={styles.profileIcon}>👤</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={onHistory} style={styles.headerButton}>
+            <Text style={styles.historyLink}>History</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onProfile}>
+            <Text style={styles.profileIcon}>👤</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Steps card */}
@@ -554,6 +559,9 @@ const styles = StyleSheet.create({
   logo: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', letterSpacing: -0.5 },
   signOut: { fontSize: 13, color: '#999' },
   profileIcon: { fontSize: 22 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  headerButton: {},
+  historyLink: { fontSize: 13, color: '#888', fontWeight: '500' },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
