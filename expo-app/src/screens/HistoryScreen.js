@@ -9,6 +9,9 @@ import {
 } from 'react-native'
 import { supabase } from '../lib/supabase'
 
+const formatDate = (dateStr) =>
+  new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
 export default function HistoryScreen({ user, onBack }) {
   const [challenges, setChallenges] = useState([])
   const [loading, setLoading] = useState(true)
@@ -80,7 +83,7 @@ export default function HistoryScreen({ user, onBack }) {
       return (
         <View key={ch.id} style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.dateRange}>{ch.start_date} → {ch.end_date}</Text>
+            <Text style={styles.dateRange}>{formatDate(ch.start_date)} → {formatDate(ch.end_date)}</Text>
             <Text style={[styles.result, fullRefund ? styles.resultFull : styles.resultPartial]}>
               {fullRefund ? '✓ Full refund' : 'Partial refund'}
             </Text>
