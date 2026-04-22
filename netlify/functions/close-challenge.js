@@ -173,7 +173,19 @@ async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKe
     return { success: false, reason: 'Challenge not in active state — already closing or completed' }
   }
 
-  // Step 3 — Load daily_logs
+  // Step 3 — Validate effective_amount_cents from first principles (CRIT-1).
+  // Prevents a tampered or corrupted stored value from inflating the penalty.
+  const expectedEffective = challenge.welcome_bonus_applied
+    ? challenge.amount_cents * 2
+    : challenge.amount_cents
+
+  if (challenge.effective_amount_cents !== expectedEffective) {
+    throw new Error(
+      `effective_amount_cents integrity violation: stored=${challenge.effective_amount_cents}, expected=${expectedEffective}`
+    )
+  }
+
+  // Step 4 — Load daily_logs
   const logs = await withTimeout(
     supabaseGet(supabaseUrl, serviceKey,
       `daily_logs?challenge_id=eq.${encodeURIComponent(challengeId)}&select=log_date,goal_met,grace_day_used`),
@@ -181,12 +193,12 @@ async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKe
   )
   const dailyLogs = Array.isArray(logs) ? logs : []
 
-  // Step 4 — Calculate penalty and refund
+  // Step 5 — Calculate penalty and refund using expectedEffective (not stored value)
   const failedDays = dailyLogs.filter(l => !l.goal_met && !l.grace_day_used).length
-  const penaltyCents = Math.round((failedDays / 7) * challenge.effective_amount_cents)
+  const penaltyCents = Math.round((failedDays / 7) * expectedEffective)
   const refundCents = Math.max(0, challenge.amount_cents - Math.min(penaltyCents, challenge.amount_cents))
 
-  // Step 5 — Mark challenge completed BEFORE Stripe call.
+  // Step 6 — Mark challenge completed BEFORE Stripe call.
   // If Stripe times out the challenge is already closed and cannot be refunded again on retry.
   await withTimeout(
     supabasePatch(supabaseUrl, serviceKey,
@@ -196,7 +208,7 @@ async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKe
     5000
   )
 
-  // Step 6 — Record penalty in penalty_pool
+  // Step 7 — Record penalty in penalty_pool
   if (penaltyCents > 0) {
     await withTimeout(
       supabaseInsert(supabaseUrl, serviceKey, 'penalty_pool', {
@@ -208,18 +220,24 @@ async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKe
     )
   }
 
-  // Step 7 — Mark welcome_bonus_used on profiles if bonus was applied
+  // Step 8 — Conditionally mark welcome_bonus_used (CRIT-1).
+  // Filter on welcome_bonus_used=is.false so the PATCH is a no-op if another concurrent
+  // close already claimed the bonus. Empty rows = already claimed; log warning, do not throw
+  // (penalty was already calculated from first-principles expectedEffective, so amount is correct).
   if (challenge.welcome_bonus_applied) {
-    await withTimeout(
-      supabasePatch(supabaseUrl, serviceKey,
-        `profiles?user_id=eq.${encodeURIComponent(challenge.user_id)}`,
+    const bonusRows = await withTimeout(
+      supabasePatchReturning(supabaseUrl, serviceKey,
+        `profiles?user_id=eq.${encodeURIComponent(challenge.user_id)}&welcome_bonus_used=is.false`,
         { welcome_bonus_used: true }
       ),
       5000
     )
+    if (!Array.isArray(bonusRows) || bonusRows.length === 0) {
+      console.warn(`[close-challenge] welcome_bonus_used already true for user ${challenge.user_id} — concurrent close detected, skipping`)
+    }
   }
 
-  // Step 8 — Stripe refund LAST.
+  // Step 9 — Stripe refund LAST.
   // Challenge is already 'completed' — even if this fails, no double refund is possible.
   // Idempotency key ensures retries never produce a second refund.
   if (refundCents > 0 && challenge.stripe_payment_intent_id && stripeKey) {
