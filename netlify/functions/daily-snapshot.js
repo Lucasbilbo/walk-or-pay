@@ -225,6 +225,15 @@ async function getStepsForUser(userId, date, supabaseUrl, serviceKey, googleClie
       }
     }
   }
+
+  // Sanity bounds — reject implausible values from fake or manipulated data sources (CRIT-5)
+  const MAX_PLAUSIBLE_STEPS = 80000 // ~40 miles, physiologically extreme
+  const MIN_PLAUSIBLE_STEPS = 0
+  if (steps < MIN_PLAUSIBLE_STEPS || steps > MAX_PLAUSIBLE_STEPS) {
+    console.error(`[SECURITY] Implausible step count for user ${userId}: ${steps} — treating as 0`)
+    steps = 0
+  }
+
   return steps
 }
 
