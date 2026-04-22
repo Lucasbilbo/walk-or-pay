@@ -11,11 +11,12 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A0A0A"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.walkorpay.app",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Walk or Pay reads your step count to verify your daily challenge.",
         "NSHealthUpdateUsageDescription": "Walk or Pay needs access to your health data.",
@@ -25,7 +26,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0A0A0A"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.walkorpay.app"
