@@ -91,3 +91,27 @@ cd expo-app && npx expo start --dev-client --tunnel
 - daily-snapshot can be triggered manually: `curl -X POST https://walk-or-pay.netlify.app/.netlify/functions/daily-snapshot`
 - To force challenge close for testing: UPDATE challenges SET end_date = CURRENT_DATE - INTERVAL '1 day' WHERE status = 'active'
 - EAS login with Apple SSO: use `eas login --sso` not `eas login`
+
+## Session: 2026-04-22
+
+### What we did
+- Fixed 3 critical security bugs found by Opus 4 audit (CRIT-1, CRIT-2, CRIT-3, CRIT-4)
+- Fixed step count validation against Google Fit manipulation (CRIT-5)
+- Added Stripe idempotency key to prevent double refunds (HIGH-4)
+- Added closing status to challenges table constraint
+- Fixed EUR symbol in CreateChallengeScreen amount buttons
+- Fixed date format in HistoryScreen and CompletedScreen (ISO → "Apr 20")
+- Added NSCameraUsageDescription and NSPhotoLibraryUsageDescription to app.json (required by Apple for Stripe CardField)
+- Fixed profiles upsert key in stripe-webhook (id → user_id)
+- EAS production build completed and delivered to App Store Connect via Transporter
+- App Store Connect listing filled: description, keywords, privacy, categories, reviewer account
+
+### Current status
+- Build delivered to App Store Connect ✅
+- Waiting for Apple to process build (~15 min)
+- Then: select build in listing → Add to Review → Submit
+
+### Still pending
+- App icon (using logo with $ for now, update to € in v1.1)
+- Screenshots (need retake with EUR fixes)
+- App Store review (1-3 days after submit)
