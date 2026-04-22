@@ -48,6 +48,30 @@ function supabasePatch(supabaseUrl, serviceKey, path, body) {
   })
 }
 
+// Like supabasePatch but returns the updated rows (empty array = no rows matched)
+function supabasePatchReturning(supabaseUrl, serviceKey, path, body) {
+  const hostname = new URL(supabaseUrl).hostname
+  const bodyStr = JSON.stringify(body)
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname, path: `/rest/v1/${path}`, method: 'PATCH',
+      headers: {
+        apikey: serviceKey, Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr),
+        Prefer: 'return=representation',
+      },
+    }, (res) => {
+      let d = ''
+      res.on('data', c => d += c)
+      res.on('end', () => { try { resolve(JSON.parse(d)) } catch { resolve(null) } })
+    })
+    req.on('error', () => resolve(null))
+    req.write(bodyStr)
+    req.end()
+  })
+}
+
 function supabaseInsert(supabaseUrl, serviceKey, table, body) {
   const hostname = new URL(supabaseUrl).hostname
   const bodyStr = JSON.stringify(body)
@@ -94,7 +118,7 @@ function verifySupabaseJwt(supabaseUrl, serviceKey, token) {
   })
 }
 
-function stripeRefund(secretKey, paymentIntentId, amountCents) {
+function stripeRefund(secretKey, paymentIntentId, amountCents, idempotencyKey) {
   const params = new URLSearchParams({
     payment_intent: paymentIntentId,
     amount: String(amountCents),
@@ -107,6 +131,7 @@ function stripeRefund(secretKey, paymentIntentId, amountCents) {
         Authorization: `Basic ${auth}`,
         'Content-Type': 'application/x-www-form-urlencoded',
         'Content-Length': Buffer.byteLength(params),
+        'Idempotency-Key': idempotencyKey,
       },
     }, (res) => {
       let d = ''
@@ -124,7 +149,7 @@ function stripeRefund(secretKey, paymentIntentId, amountCents) {
 
 // Exported for use from daily-snapshot
 async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKey) {
-  // Load challenge
+  // Step 1 — Load challenge
   const rows = await withTimeout(
     supabaseGet(supabaseUrl, serviceKey,
       `challenges?id=eq.${encodeURIComponent(challengeId)}&select=*`),
@@ -134,7 +159,21 @@ async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKe
   if (!challenge) throw new Error('Challenge not found')
   if (challenge.status !== 'active') throw new Error('Challenge is not active')
 
-  // Load daily_logs — column is log_date, not date
+  // Step 2 — Atomic lock: PATCH only succeeds if status is still 'active'.
+  // If another process already acquired the lock, lockRows will be empty.
+  const lockRows = await withTimeout(
+    supabasePatchReturning(supabaseUrl, serviceKey,
+      `challenges?id=eq.${encodeURIComponent(challengeId)}&status=eq.active`,
+      { status: 'closing' }
+    ),
+    5000
+  )
+  if (!Array.isArray(lockRows) || lockRows.length === 0) {
+    console.warn(`[close-challenge] Lock not acquired for ${challengeId} — already closing or completed`)
+    return { success: false, reason: 'Challenge not in active state — already closing or completed' }
+  }
+
+  // Step 3 — Load daily_logs
   const logs = await withTimeout(
     supabaseGet(supabaseUrl, serviceKey,
       `daily_logs?challenge_id=eq.${encodeURIComponent(challengeId)}&select=log_date,goal_met,grace_day_used`),
@@ -142,27 +181,22 @@ async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKe
   )
   const dailyLogs = Array.isArray(logs) ? logs : []
 
-  // Failed days: goal not met and no grace day used
+  // Step 4 — Calculate penalty and refund
   const failedDays = dailyLogs.filter(l => !l.goal_met && !l.grace_day_used).length
-
   const penaltyCents = Math.round((failedDays / 7) * challenge.effective_amount_cents)
   const refundCents = Math.max(0, challenge.amount_cents - Math.min(penaltyCents, challenge.amount_cents))
 
-  // Stripe refund
-  if (refundCents > 0 && challenge.stripe_payment_intent_id && stripeKey) {
-    try {
-      const refund = await withTimeout(
-        stripeRefund(stripeKey, challenge.stripe_payment_intent_id, refundCents),
-        5000
-      )
-      console.log(`[close-challenge] Refunded ${refundCents} cents for challenge ${challengeId}, status: ${refund.status}`)
-    } catch (e) {
-      console.error(`[close-challenge] Stripe refund failed for ${challengeId}:`, e.message)
-      // Don't block completion on refund failure
-    }
-  }
+  // Step 5 — Mark challenge completed BEFORE Stripe call.
+  // If Stripe times out the challenge is already closed and cannot be refunded again on retry.
+  await withTimeout(
+    supabasePatch(supabaseUrl, serviceKey,
+      `challenges?id=eq.${encodeURIComponent(challengeId)}`,
+      { status: 'completed', penalty_cents: penaltyCents }
+    ),
+    5000
+  )
 
-  // Record penalty in penalty_pool
+  // Step 6 — Record penalty in penalty_pool
   if (penaltyCents > 0) {
     await withTimeout(
       supabaseInsert(supabaseUrl, serviceKey, 'penalty_pool', {
@@ -174,7 +208,7 @@ async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKe
     )
   }
 
-  // Mark welcome_bonus_used on profiles if bonus was applied — PK is id
+  // Step 7 — Mark welcome_bonus_used on profiles if bonus was applied
   if (challenge.welcome_bonus_applied) {
     await withTimeout(
       supabasePatch(supabaseUrl, serviceKey,
@@ -185,17 +219,26 @@ async function closeChallengeById(challengeId, supabaseUrl, serviceKey, stripeKe
     )
   }
 
-  // Mark challenge completed
-  await withTimeout(
-    supabasePatch(supabaseUrl, serviceKey,
-      `challenges?id=eq.${encodeURIComponent(challengeId)}`,
-      { status: 'completed', penalty_cents: penaltyCents }
-    ),
-    5000
-  )
+  // Step 8 — Stripe refund LAST.
+  // Challenge is already 'completed' — even if this fails, no double refund is possible.
+  // Idempotency key ensures retries never produce a second refund.
+  if (refundCents > 0 && challenge.stripe_payment_intent_id && stripeKey) {
+    try {
+      const idempotencyKey = `refund-${challengeId}-${refundCents}`
+      const refund = await withTimeout(
+        stripeRefund(stripeKey, challenge.stripe_payment_intent_id, refundCents, idempotencyKey),
+        5000
+      )
+      console.log(`[close-challenge] Refunded ${refundCents} cents for challenge ${challengeId}, status: ${refund.status}`)
+    } catch (e) {
+      // Challenge is already completed — do NOT revert. Flag for manual review.
+      console.error(`[close-challenge] Stripe refund failed for ${challengeId}:`, e.message)
+      console.error(`[close-challenge] MANUAL REVIEW REQUIRED: challenge ${challengeId} completed but refund of ${refundCents} cents failed`)
+    }
+  }
 
   console.log(`[close-challenge] Closed challenge ${challengeId}: failedDays=${failedDays}, penalty=${penaltyCents}, refund=${refundCents}`)
-  return { failed_days: failedDays, penalty_cents: penaltyCents, refund_cents: refundCents }
+  return { success: true, failed_days: failedDays, penalty_cents: penaltyCents, refund_cents: refundCents }
 }
 
 exports.closeChallengeById = closeChallengeById
@@ -268,6 +311,9 @@ exports.handler = async (event) => {
     const result = await closeChallengeById(
       challenge_id, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY
     )
+    if (result.success === false) {
+      return { statusCode: 409, headers: CORS, body: JSON.stringify({ error: result.reason }) }
+    }
     return {
       statusCode: 200,
       headers: { ...CORS, 'Content-Type': 'application/json' },

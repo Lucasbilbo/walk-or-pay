@@ -30,7 +30,7 @@ CREATE POLICY "profiles: own row update"
 CREATE TABLE IF NOT EXISTS public.challenges (
   id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id                  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  status                   TEXT NOT NULL CHECK (status IN ('pending_payment', 'active', 'completed', 'cancelled')),
+  status                   TEXT NOT NULL CHECK (status IN ('pending_payment', 'active', 'closing', 'completed', 'cancelled')),
   daily_goal               INTEGER NOT NULL,
   amount_cents             INTEGER NOT NULL,
   effective_amount_cents   INTEGER NOT NULL,
