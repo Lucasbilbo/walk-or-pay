@@ -7,11 +7,13 @@ import Dashboard from './components/Dashboard'
 import CreateChallenge from './components/CreateChallenge'
 import PrivacyPolicy from './components/PrivacyPolicy'
 import TermsOfService from './components/TermsOfService'
+import SupportPage from './components/SupportPage'
 
 export default function App() {
   const path = window.location.pathname
   if (path === '/privacy') return <PrivacyPolicy />
   if (path === '/terms') return <TermsOfService />
+  if (path === '/support') return <SupportPage />
   const { user, loading: authLoading, signInWithMagicLink, signOut } = useAuth()
 
   const [screen, setScreen] = useState('dashboard') // 'dashboard' | 'create-challenge'
