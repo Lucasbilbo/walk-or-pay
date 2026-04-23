@@ -1,7 +1,20 @@
 # Walk or Pay — Project Status
 
 ## Current Status (April 22, 2026)
-🟡 APP IN APPLE REVIEW — submitted April 22, 2026. Expected decision: 1-3 days.
+🔴 REJECTED BY APPLE — Under appeal.
+
+Rejection reasons:
+1. Guideline 3.2.2 — "App charges users when they don't meet personal targets"
+   → Appeal sent arguing it's a commitment deposit, not a penalty. Money goes to charity.
+2. Guideline 1.5 — Support URL not functional
+   → Fixed: /support page created, URL updated to https://walk-or-pay.netlify.app/support
+
+Appeal argument: Walk or Pay is a commitment deposit model identical to Beeminder/StickK.
+User's own money is returned proportionally. Unrefunded amounts go to charity.
+Walk or Pay retains nothing.
+
+If appeal fails: reframe app as "charitable commitment" — user pledges to charity if they miss goal.
+This removes the financial penalty framing entirely and is more Apple-friendly.
 
 ## Product
 Walk or Pay is an iOS app where users create 7-day step challenges with real money at stake.
