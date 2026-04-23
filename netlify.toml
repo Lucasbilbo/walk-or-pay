@@ -13,9 +13,31 @@
 [functions."evening-reminder"]
   schedule = "0 17 * * *"
 
+# Static pages served by the React app (keep URLs stable for App Store / external links)
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from = "/privacy"
+  to = "/app/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms"
+  to = "/app/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/support"
+  to = "/app/index.html"
+  status = 200
+
+# React app at /app/*
+[[redirects]]
+  from = "/app"
+  to = "/app/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/app/*"
+  to = "/app/index.html"
   status = 200
 
 [[headers]]
