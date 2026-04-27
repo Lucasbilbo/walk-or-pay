@@ -245,7 +245,7 @@ exports.handler = async (event) => {
   let paymentIntent
   try {
     const stripeRes = await withTimeout(
-      stripeCreatePaymentIntent(STRIPE_SECRET_KEY, amount_cents, {
+      stripeCreatePaymentIntent(STRIPE_SECRET_KEY, amount_cents + 100, { // +100 cents = €1 Walk or Pay service fee
         challenge_id: challenge.id,
         user_id: user.id,
         welcome_bonus_applied: welcomeBonusApplied,
