@@ -184,9 +184,13 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
             <Text style={styles.summaryLabel}>Grace days</Text>
             <Text style={styles.summaryValue}>{graceDays === 0 ? 'None' : '1 day'}</Text>
           </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Service fee</Text>
+            <Text style={styles.summaryValue}>€1.00</Text>
+          </View>
           <View style={[styles.summaryRow, styles.summaryTotal]}>
             <Text style={styles.summaryLabelBold}>Total charge</Text>
-            <Text style={styles.summaryValueBold}>€{amountEuros}.00</Text>
+            <Text style={styles.summaryValueBold}>€{amountEuros + 1}.00</Text>
           </View>
 
           <Text style={styles.cardFieldLabel}>Card details</Text>
@@ -209,12 +213,12 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.payButtonText}>{`Pay €${amountEuros} & Start Challenge`}</Text>
+              : <Text style={styles.payButtonText}>{`Pay €${amountEuros + 1} & Start Challenge`}</Text>
             }
           </TouchableOpacity>
 
           <Text style={styles.disclaimer}>
-            You'll be refunded proportionally for days you hit your goal.
+            Hit your goal = full refund. Miss a day = that share goes to ALS Association Walk to Defeat ALS.
           </Text>
         </View>
       )}

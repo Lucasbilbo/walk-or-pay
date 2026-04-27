@@ -17,7 +17,7 @@ const SLIDES = [
   },
   {
     title: 'Your money, your motivation',
-    body: 'Penalties are donated to charitable causes. No excuses — just walk.',
+    body: 'Missed days are donated to ALS Association — Walk to Defeat ALS. You walk for those who can\'t.',
     emoji: '🏁',
   },
 ]

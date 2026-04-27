@@ -70,7 +70,7 @@ function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) 
           <Text style={styles.summaryValue}>{(challenge.amount_cents / 100).toFixed(2)} €</Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Penalty</Text>
+          <Text style={styles.summaryLabel}>Donated to ALS</Text>
           <Text style={[styles.summaryValue, penaltyCents > 0 && styles.textDanger]}>
             {(penaltyCents / 100).toFixed(2)} €
           </Text>
@@ -86,8 +86,8 @@ function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) 
       <View style={[styles.card, penaltyCents === 0 ? styles.cardSuccess : styles.cardWarning]}>
         <Text style={styles.completedMessage}>
           {penaltyCents === 0
-            ? 'Challenge completed with no penalty! Your full deposit will be refunded.'
-            : 'Your penalty will be donated to a charitable cause.'}
+            ? 'Challenge completed! Your full deposit will be refunded.'
+            : 'Your missed days have been donated to ALS Association — Walk to Defeat ALS'}
         </Text>
       </View>
 
@@ -491,7 +491,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge, onP
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>€{dailyRisk}</Text>
-                <Text style={styles.statLabel}>Today's risk</Text>
+                <Text style={styles.statLabel}>Today's pledge</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statBox}>

@@ -84,9 +84,14 @@ export default function HistoryScreen({ user, onBack }) {
         <View key={ch.id} style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.dateRange}>{formatDate(ch.start_date)} → {formatDate(ch.end_date)}</Text>
-            <Text style={[styles.result, fullRefund ? styles.resultFull : styles.resultPartial]}>
-              {fullRefund ? '✓ Full refund' : 'Partial refund'}
-            </Text>
+            <View style={styles.resultWrapper}>
+              <Text style={[styles.result, fullRefund ? styles.resultFull : styles.resultPartial]}>
+                {fullRefund ? '✓ Full refund' : 'Partial refund'}
+              </Text>
+              {!fullRefund && (
+                <Text style={styles.resultSub}>remainder donated to ALS</Text>
+              )}
+            </View>
           </View>
 
           <View style={styles.row}>
@@ -173,7 +178,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   dateRange: { fontSize: 13, fontWeight: '600', color: '#1a1a1a' },
+  resultWrapper: { alignItems: 'flex-end' },
   result: { fontSize: 13, fontWeight: '700' },
+  resultSub: { fontSize: 11, color: '#aaa', marginTop: 2 },
   resultFull: { color: '#16a34a' },
   resultPartial: { color: '#f59e0b' },
   row: {
