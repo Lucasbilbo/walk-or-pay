@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Walk or Pay — Hit your steps or pay the price</title>
-  <meta name="description" content="Create a 7-day step challenge with real money at stake. Hit your daily goal or lose a fraction of your deposit to charity." />
+  <title>Walk or Pay — Walk for those who can't</title>
+  <meta name="description" content="Create a 7-day step challenge with real money at stake. Hit your daily goal or that share goes to ALS research." />
   <meta property="og:title" content="Walk or Pay" />
-  <meta property="og:description" content="Hit your steps or pay the price. A 7-day challenge with real money at stake." />
+  <meta property="og:description" content="Walk for those who can't. A 7-day commitment challenge where missed days fund ALS research." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet" />
@@ -527,12 +527,12 @@
     </div>
 
     <h1 class="hero-headline">
-      Walk.<br>Or <span class="accent">pay</span><br>the price.
+      Walk<br>for those<br>who <span class="accent">can't</span>.
     </h1>
 
     <p class="hero-sub">
-      A 7-day step challenge with real money on the line. 
-      Miss your daily goal and lose a fraction of your deposit — to charity.
+      A 7-day commitment challenge. Hit your daily step goal and get your deposit back.
+      Miss a day? That share goes to ALS Association — funding research for people who would give anything to walk.
     </p>
 
     <div class="hero-actions">
@@ -549,18 +549,9 @@
 
   <!-- STATS -->
   <div class="stats-bar">
-    <div class="stats-inner">
-      <div>
-        <div class="stat-num"><span class="unit">€</span><span id="cnt-donated">0</span></div>
-        <div class="stat-label">donated to charity</div>
-      </div>
-      <div>
-        <div class="stat-num"><span id="cnt-challenges">0</span><span class="unit">k+</span></div>
-        <div class="stat-label">challenges started</div>
-      </div>
-      <div>
-        <div class="stat-num"><span id="cnt-rate">0</span><span class="unit">%</span></div>
-        <div class="stat-label">completion rate</div>
+    <div class="stats-inner" style="justify-content:center">
+      <div style="text-align:center">
+        <div class="stat-label" style="font-size:15px;color:var(--text)">Every missed day goes to ALS Association — Walk to Defeat ALS 🎗️</div>
       </div>
     </div>
   </div>
@@ -589,7 +580,7 @@
           <p class="step-num">03</p>
           <div class="step-icon icon-gray">⚖️</div>
           <h3 class="step-title">Win it back or pay up</h3>
-          <p class="step-body">Complete the challenge and get your full deposit back. Miss days? Lose a proportional fraction to charity. One grace day included — use it wisely.</p>
+          <p class="step-body">Complete the challenge and get your full deposit back. Miss a day? That share goes to ALS Association — funding research for people who can't walk. One grace day included — use it wisely.</p>
         </div>
       </div>
     </div>
@@ -659,7 +650,7 @@
             <span class="tag tag-today">In progress</span>
           </div>
           <div class="prev-footer">
-            <span class="penalty-label">Penalty so far (1 miss)</span>
+            <span class="penalty-label">Donated so far (1 miss)</span>
             <span class="penalty-value">€2.86</span>
           </div>
         </div>
@@ -668,22 +659,22 @@
           <div class="mech-point">
             <div class="mech-icon">📐</div>
             <div class="mech-text">
-              <h4>Proportional penalty</h4>
-              <p>Each missed day costs 1/7 of your stake. 1 miss on €20 = lose €2.86. The math is always transparent and fair.</p>
+              <h4>Proportional donation</h4>
+              <p>Each missed day donates 1/7 of your stake. 1 miss on €20 = €2.86 to ALS research. The math is always transparent and fair.</p>
             </div>
           </div>
           <div class="mech-point">
             <div class="mech-icon">🛡️</div>
             <div class="mech-text">
               <h4>One grace day</h4>
-              <p>Life happens. Each challenge includes one free pass — a day that absorbs a miss without any penalty.</p>
+              <p>Life happens. Each challenge includes one free pass — a day that absorbs a miss without any donation.</p>
             </div>
           </div>
           <div class="mech-point">
             <div class="mech-icon">🏥</div>
             <div class="mech-text">
-              <h4>Penalties go to charity</h4>
-              <p>You don't lose money to us — every penalty goes to a verified NGO. Your failure funds something meaningful.</p>
+              <h4>Donations go to ALS research</h4>
+              <p>Every missed day funds ALS Association's Walk to Defeat ALS — research for people who would give anything to walk again.</p>
             </div>
           </div>
           <div class="mech-point">
@@ -749,7 +740,7 @@
             Where does my money actually go?
             <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
           </button>
-          <div class="faq-a"><div class="faq-a-inner">Your deposit is held securely via Stripe. Complete the challenge and you receive a full refund. Any penalties are donated to a verified NGO — Walk or Pay keeps none of your penalty money.</div></div>
+          <div class="faq-a"><div class="faq-a-inner">Your deposit is held securely via Stripe. Complete the challenge and you receive a full refund. Any missed days are donated to the ALS Association — Walk to Defeat ALS. Walk or Pay keeps none of your deposit.</div></div>
         </div>
         <div class="faq-item">
           <button class="faq-q" onclick="toggleFaq(this)">
@@ -784,7 +775,7 @@
             <strong>App Store</strong>
           </div>
         </a>
-        <p class="cta-note">Free to download &middot; iOS 16+ &middot; Payments by Stripe</p>
+        <p class="cta-note">Free to download &middot; iOS 16+ &middot; Missed days go to ALS research</p>
       </div>
     </div>
   </section>
@@ -825,15 +816,6 @@
       }, 16);
     }
 
-    const statsObs = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        animateCounter(document.getElementById('cnt-donated'), 1240, 1600);
-        animateCounter(document.getElementById('cnt-challenges'), 3, 1200);
-        animateCounter(document.getElementById('cnt-rate'), 78, 1400);
-        statsObs.disconnect();
-      }
-    }, { threshold: 0.5 });
-    statsObs.observe(document.querySelector('.stats-bar'));
 
     function toggleFaq(btn) {
       const item = btn.closest('.faq-item');
