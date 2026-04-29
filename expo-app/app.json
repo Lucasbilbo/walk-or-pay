@@ -15,6 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
+      "requiresFullScreen": true,
       "bundleIdentifier": "com.walkorpay.app",
       "icon": "./assets/icon.png",
       "infoPlist": {
@@ -22,7 +23,8 @@
         "NSHealthUpdateUsageDescription": "Walk or Pay needs access to your health data.",
         "NSCameraUsageDescription": "Camera access is used to scan credit card numbers for faster payment.",
         "NSPhotoLibraryUsageDescription": "Photo library access is not used by this app.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIDeviceFamily": [1]
       }
     },
     "android": {

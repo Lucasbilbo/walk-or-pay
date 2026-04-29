@@ -15,8 +15,11 @@ console.log('[LoginScreen] supabase URL:', supabase.supabaseUrl)
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
+  const [usePassword, setUsePassword] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
 
   async function handleSendLink() {
     const trimmed = email.trim().toLowerCase()
@@ -41,6 +44,27 @@ export default function LoginScreen() {
     }
 
     setSent(true)
+  }
+
+  async function handlePasswordSignIn() {
+    const trimmed = email.trim().toLowerCase()
+    if (!trimmed || !trimmed.includes('@')) {
+      setPasswordError('Please enter a valid email address.')
+      return
+    }
+    if (!password) {
+      setPasswordError('Please enter your password.')
+      return
+    }
+
+    setPasswordError('')
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithPassword({ email: trimmed, password })
+    setLoading(false)
+
+    if (error) {
+      setPasswordError(error.message)
+    }
   }
 
   if (sent) {
@@ -78,19 +102,58 @@ export default function LoginScreen() {
           autoCapitalize="none"
           autoComplete="email"
           autoCorrect={false}
-          onSubmitEditing={handleSendLink}
-          returnKeyType="send"
+          onSubmitEditing={usePassword ? handlePasswordSignIn : handleSendLink}
+          returnKeyType={usePassword ? 'next' : 'send'}
         />
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSendLink}
-          disabled={loading}
-        >
-          {loading
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.buttonText}>Send magic link</Text>
-          }
-        </TouchableOpacity>
+
+        {usePassword ? (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={(v) => { setPassword(v); setPasswordError('') }}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              onSubmitEditing={handlePasswordSignIn}
+              returnKeyType="done"
+            />
+            {passwordError ? (
+              <Text style={styles.errorText}>{passwordError}</Text>
+            ) : null}
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handlePasswordSignIn}
+              disabled={loading}
+            >
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.buttonText}>Sign In</Text>
+              }
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setUsePassword(false); setPasswordError('') }} style={styles.link}>
+              <Text style={styles.linkText}>Sign in with magic link instead</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSendLink}
+              disabled={loading}
+            >
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.buttonText}>Send magic link</Text>
+              }
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setUsePassword(true)} style={styles.link}>
+              <Text style={styles.linkText}>Sign in with password instead</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </KeyboardAvoidingView>
   )
@@ -165,11 +228,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   link: {
-    marginTop: 24,
+    marginTop: 4,
+    alignItems: 'center',
   },
   linkText: {
     color: '#888',
     fontSize: 14,
     textDecorationLine: 'underline',
+  },
+  errorText: {
+    color: '#e53e3e',
+    fontSize: 13,
+    textAlign: 'center',
   },
 })
