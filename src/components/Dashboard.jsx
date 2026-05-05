@@ -41,7 +41,7 @@ function EmptyState({ profile, onStartChallenge }) {
       <div style={{ fontSize: 64, marginBottom: 16 }}>🚶</div>
       <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 12 }}>No active challenge</h2>
       <p style={{ color: 'var(--color-text-secondary)', marginBottom: 28, fontSize: 15, lineHeight: 1.6 }}>
-        Put real money on the line and walk your way to a healthier life. Hit your goal every day — get it all back.
+        Commit to your goal — if you miss a day, your pledge goes to a charity you choose. Hit every day and get it all back.
       </p>
       {profile?.welcome_bonus_used === false && (
         <div style={bonusStyle}>🎁 2x bonus on your first challenge!</div>
@@ -82,7 +82,7 @@ function CompletedSummary({ challenge, dailyLogs, onStartChallenge }) {
             <div style={{ fontSize: 28, fontWeight: 800, color: penaltyCents > 0 ? 'var(--color-danger)' : 'var(--color-text)' }}>
               {eur(penaltyCents)}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Penalty</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Pledged to {challenge.charity || 'charity'}</div>
           </div>
           <div>
             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-primary)' }}>{eur(refundCents)}</div>
@@ -379,11 +379,11 @@ export default function Dashboard({ user, profile, onStartChallenge }) {
             }}>
               {eur(moneyLostCents)}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Lost so far</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Pledged so far</div>
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-warning)' }}>{eur(dailyRiskCents)}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Today's risk</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Today's pledge</div>
           </div>
         </div>
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--color-border)', fontSize: 12, color: 'var(--color-text-secondary)' }}>

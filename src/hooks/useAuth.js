@@ -32,9 +32,14 @@ export function useAuth() {
     if (error) throw error
   }
 
+  async function signInWithPassword(email, password) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
   }
 
-  return { user, loading, signInWithMagicLink, signOut }
+  return { user, loading, signInWithMagicLink, signInWithPassword, signOut }
 }

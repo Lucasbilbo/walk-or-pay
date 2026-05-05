@@ -1,7 +1,9 @@
 import { useState } from 'react'
 
-export default function AuthScreen({ onSignIn }) {
+export default function AuthScreen({ onSignIn, onSignInWithPassword }) {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [mode, setMode] = useState('magic') // 'magic' | 'password'
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState(null)
@@ -12,10 +14,14 @@ export default function AuthScreen({ onSignIn }) {
     setLoading(true)
     setError(null)
     try {
-      await onSignIn(email.trim())
-      setSent(true)
+      if (mode === 'password') {
+        await onSignInWithPassword(email.trim(), password)
+      } else {
+        await onSignIn(email.trim())
+        setSent(true)
+      }
     } catch (err) {
-      setError(err.message || 'Failed to send magic link. Try again.')
+      setError(err.message || (mode === 'password' ? 'Invalid email or password.' : 'Failed to send magic link. Try again.'))
     } finally {
       setLoading(false)
     }
@@ -40,7 +46,7 @@ export default function AuthScreen({ onSignIn }) {
     <div style={s.outer}>
       <div className="card" style={s.card}>
         <h1 style={s.logo}>Walk or Pay</h1>
-        <p style={s.tagline}>Hit your step goal — or pay the price.</p>
+        <p style={s.tagline}>Hit your step goal — or fund a cause you care about.</p>
         <form onSubmit={handleSubmit} style={s.form}>
           <input
             type="email"
@@ -51,16 +57,35 @@ export default function AuthScreen({ onSignIn }) {
             autoFocus
             style={s.input}
           />
+          {mode === 'password' && (
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              style={s.input}
+            />
+          )}
           <button
             type="submit"
             className="btn btn-primary"
             disabled={loading || !email.trim()}
             style={{ width: '100%', padding: '13px' }}
           >
-            {loading ? 'Sending…' : 'Send magic link'}
+            {loading
+              ? (mode === 'password' ? 'Signing in…' : 'Sending…')
+              : (mode === 'password' ? 'Sign in' : 'Send magic link')}
           </button>
         </form>
         {error && <p style={s.error}>{error}</p>}
+        <button
+          type="button"
+          onClick={() => { setMode(m => m === 'magic' ? 'password' : 'magic'); setError(null) }}
+          style={s.modeToggle}
+        >
+          {mode === 'magic' ? 'Sign in with password instead' : 'Send magic link instead'}
+        </button>
         <p style={s.footer}>
           <a href="/privacy" style={s.footerLink}>Privacy Policy</a>
           {' · '}
@@ -86,6 +111,11 @@ const s = {
     color: 'var(--color-text)', fontSize: 15, fontFamily: 'inherit', outline: 'none',
   },
   error: { color: 'var(--color-danger)', fontSize: 13, marginTop: 12 },
+  modeToggle: {
+    background: 'none', border: 'none', color: 'var(--color-text-secondary)',
+    fontSize: 13, cursor: 'pointer', marginTop: 16, textDecoration: 'underline',
+    fontFamily: 'inherit',
+  },
   footer: { marginTop: 24, fontSize: 12, color: 'var(--color-text-secondary)' },
   footerLink: { color: 'var(--color-text-secondary)' },
 }

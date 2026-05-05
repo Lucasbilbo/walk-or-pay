@@ -14,7 +14,7 @@ export default function App() {
   if (path === '/privacy') return <PrivacyPolicy />
   if (path === '/terms') return <TermsOfService />
   if (path === '/support') return <SupportPage />
-  const { user, loading: authLoading, signInWithMagicLink, signOut } = useAuth()
+  const { user, loading: authLoading, signInWithMagicLink, signInWithPassword, signOut } = useAuth()
 
   const [screen, setScreen] = useState('dashboard') // 'dashboard' | 'create-challenge'
   const [profile, setProfile] = useState(null)
@@ -80,7 +80,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <AuthScreen onSignIn={signInWithMagicLink} />
+    return <AuthScreen onSignIn={signInWithMagicLink} onSignInWithPassword={signInWithPassword} />
   }
 
   if (!hasFitnessToken) {

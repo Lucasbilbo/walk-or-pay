@@ -64,7 +64,7 @@ function StepStake({ stake, onChange, welcomeBonusUsed, onNext, onBack }) {
       )}
 
       <div style={{ fontSize: 14, textAlign: 'center', margin: '16px 0' }}>
-        <span style={{ color: 'var(--color-text-secondary)' }}>Per missed day: </span>
+        <span style={{ color: 'var(--color-text-secondary)' }}>Daily pledge if missed: </span>
         <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>{fmt(perDayCents)}</span>
       </div>
 
@@ -82,7 +82,46 @@ function StepStake({ stake, onChange, welcomeBonusUsed, onNext, onBack }) {
   )
 }
 
-// ── Step 3: Grace day ────────────────────────────
+// ── Step 3: Charity ──────────────────────────────
+const CHARITIES = [
+  '🏥 Cruz Roja Española',
+  '🧒 UNICEF España',
+  '🌿 WWF España',
+  '🩺 Médicos Sin Fronteras',
+  '❤️ Cáritas España',
+]
+
+function StepCharity({ charity, onChange, onNext, onBack }) {
+  return (
+    <div>
+      <h2 style={s.title}>Where should missed-day pledges go?</h2>
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 20 }}>
+        If you miss a day, your pledge goes to this charity.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        {CHARITIES.map(opt => (
+          <button
+            key={opt}
+            onClick={() => onChange(opt)}
+            style={{
+              ...s.optionCard,
+              borderColor: charity === opt ? 'var(--color-primary)' : 'var(--color-border)',
+              background: charity === opt ? 'rgba(59,130,246,0.1)' : 'var(--color-surface)',
+            }}
+          >
+            <div style={{ fontWeight: 600, fontSize: 15 }}>{opt}</div>
+          </button>
+        ))}
+      </div>
+      <div style={s.btnRow}>
+        <button type="button" className="btn" onClick={onBack} style={s.backBtn}>← Back</button>
+        <button type="button" className="btn btn-primary" onClick={onNext} style={{ flex: 1 }}>Next →</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Step 4: Grace day ────────────────────────────
 function StepGraceDay({ graceDays, onChange, onNext, onBack }) {
   const options = [
     { value: 1, title: 'Yes, give me 1 grace day', sub: 'One free pass if life gets in the way' },
@@ -115,8 +154,8 @@ function StepGraceDay({ graceDays, onChange, onNext, onBack }) {
   )
 }
 
-// ── Step 4: Summary & Pay (inner — needs Stripe context) ─────────
-function StepPayInner({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSuccess }) {
+// ── Step 5: Summary & Pay (inner — needs Stripe context) ─────────
+function StepPayInner({ goal, stake, graceDays, charity, welcomeBonusUsed, onBack, onSuccess }) {
   const stripe = useStripe()
   const elements = useElements()
   const [loading, setLoading] = useState(false)
@@ -144,6 +183,7 @@ function StepPayInner({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSucc
           daily_goal: goal,
           amount_cents: amountCents,
           grace_days: graceDays,
+          charity,
         }),
       })
       const data = await res.json()
@@ -177,7 +217,8 @@ function StepPayInner({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSucc
             value: welcomeBonusUsed ? `$${stake.toFixed(2)}` : `${fmt(effectiveCents)} (2x bonus!)`,
             highlight: !welcomeBonusUsed,
           },
-          { label: 'Per missed day', value: fmt(perDayCents), danger: true },
+          { label: 'Daily pledge if missed', value: fmt(perDayCents), danger: true },
+          { label: 'Missed day pledge goes to', value: charity },
           { label: 'Grace days', value: `${graceDays}` },
         ].map(row => (
           <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
@@ -185,6 +226,7 @@ function StepPayInner({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSucc
             <span style={{
               fontWeight: 600, fontSize: 14,
               color: row.danger ? 'var(--color-danger)' : row.highlight ? 'var(--color-warning)' : 'var(--color-text)',
+              maxWidth: 200, textAlign: 'right',
             }}>
               {row.value}
             </span>
@@ -208,7 +250,7 @@ function StepPayInner({ goal, stake, graceDays, welcomeBonusUsed, onBack, onSucc
   )
 }
 
-// ── Step 4: wrapper that provides Stripe Elements context ─────────
+// ── Step 5: wrapper that provides Stripe Elements context ─────────
 function StepPay(props) {
   const stripePromise = useMemo(
     () => loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY),
@@ -226,6 +268,7 @@ export default function CreateChallenge({ welcomeBonusUsed, onBack, onSuccess })
   const [step, setStep] = useState(1)
   const [goal, setGoal] = useState(8000)
   const [stake, setStake] = useState(20)
+  const [charity, setCharity] = useState('🏥 Cruz Roja Española')
   const [graceDays, setGraceDays] = useState(1)
 
   function handleSuccess() {
@@ -245,7 +288,7 @@ export default function CreateChallenge({ welcomeBonusUsed, onBack, onSuccess })
           ← Back
         </button>
         <div style={{ display: 'flex', gap: 6, flex: 1, justifyContent: 'center' }}>
-          {[1, 2, 3, 4].map(n => (
+          {[1, 2, 3, 4, 5].map(n => (
             <div key={n} style={{
               width: 8, height: 8, borderRadius: '50%',
               background: n <= step ? 'var(--color-primary)' : 'var(--color-border)',
@@ -267,16 +310,22 @@ export default function CreateChallenge({ welcomeBonusUsed, onBack, onSuccess })
         />
       )}
       {step === 3 && (
-        <StepGraceDay
-          graceDays={graceDays} onChange={setGraceDays}
+        <StepCharity
+          charity={charity} onChange={setCharity}
           onNext={() => setStep(4)} onBack={() => setStep(2)}
         />
       )}
       {step === 4 && (
+        <StepGraceDay
+          graceDays={graceDays} onChange={setGraceDays}
+          onNext={() => setStep(5)} onBack={() => setStep(3)}
+        />
+      )}
+      {step === 5 && (
         <StepPay
-          goal={goal} stake={stake} graceDays={graceDays}
+          goal={goal} stake={stake} graceDays={graceDays} charity={charity}
           welcomeBonusUsed={welcomeBonusUsed}
-          onBack={() => setStep(3)} onSuccess={handleSuccess}
+          onBack={() => setStep(4)} onSuccess={handleSuccess}
         />
       )}
     </div>

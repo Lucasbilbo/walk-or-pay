@@ -162,7 +162,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid JSON' }) }
   }
 
-  const { daily_goal, amount_cents, grace_days } = parsed
+  const { daily_goal, amount_cents, grace_days, charity } = parsed
 
   // Input validation
   if (!daily_goal || daily_goal < 1000 || daily_goal > 50000) {
@@ -173,6 +173,9 @@ exports.handler = async (event) => {
   }
   if (![0, 1].includes(grace_days)) {
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'grace_days must be 0 or 1' }) }
+  }
+  if (!charity || typeof charity !== 'string' || charity.length > 100) {
+    return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'charity is required and must be under 100 characters' }) }
   }
 
   // Verify fitness token exists
@@ -229,6 +232,7 @@ exports.handler = async (event) => {
         welcome_bonus_applied: welcomeBonusApplied,
         start_date: today,
         end_date: endDateStr,
+        charity,
       }),
       5000
     )
