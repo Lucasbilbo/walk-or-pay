@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { supabase } from '../lib/supabase'
-console.log('[LoginScreen] supabase URL:', supabase.supabaseUrl)
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
@@ -89,7 +88,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <Text style={styles.logo}>Walk or Pay</Text>
-      <Text style={styles.tagline}>Hit your steps or pay the price</Text>
+      <Text style={styles.tagline}>Hit your step goal — or fund a cause you care about.</Text>
 
       <View style={styles.form}>
         <TextInput

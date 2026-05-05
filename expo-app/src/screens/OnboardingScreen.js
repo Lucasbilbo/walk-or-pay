@@ -17,7 +17,7 @@ const SLIDES = [
   },
   {
     title: 'Your money, your motivation',
-    body: 'Missed days are donated to ALS Association — Walk to Defeat ALS. You walk for those who can\'t.',
+    body: 'Miss a day and that day\'s share goes to a charity you choose. Hit every day and get it all back.',
     emoji: '🏁',
   },
 ]

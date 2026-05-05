@@ -70,7 +70,7 @@ function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) 
           <Text style={styles.summaryValue}>{(challenge.amount_cents / 100).toFixed(2)} €</Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Donated to ALS</Text>
+          <Text style={styles.summaryLabel}>Pledged to {challenge.charity || 'charity'}</Text>
           <Text style={[styles.summaryValue, penaltyCents > 0 && styles.textDanger]}>
             {(penaltyCents / 100).toFixed(2)} €
           </Text>
@@ -87,7 +87,7 @@ function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) 
         <Text style={styles.completedMessage}>
           {penaltyCents === 0
             ? 'Challenge completed! Your full deposit will be refunded.'
-            : 'Your missed days have been donated to ALS Association — Walk to Defeat ALS'}
+            : `Your missed days have been pledged to ${challenge.charity || 'charity'}.`}
         </Text>
       </View>
 
@@ -225,7 +225,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge, onP
     try {
       const { data: ch, error: chErr } = await supabase
         .from('challenges')
-        .select('id,daily_goal,status,start_date,end_date,amount_cents,effective_amount_cents,grace_days,grace_days_used,penalty_cents')
+        .select('id,daily_goal,status,start_date,end_date,amount_cents,effective_amount_cents,grace_days,grace_days_used,penalty_cents,charity')
         .eq('user_id', user.id)
         .in('status', ['active', 'completed'])
         .order('created_at', { ascending: false })
@@ -524,7 +524,7 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge, onP
         <View style={styles.card}>
           <Text style={styles.cardLabel}>NO ACTIVE CHALLENGE</Text>
           <Text style={styles.noChallenge}>
-            Put money on the line and commit to your daily step goal for 7 days.
+            Commit to your goal — if you miss a day, your pledge goes to a charity you choose. Hit every day and get it all back.
           </Text>
           <TouchableOpacity style={styles.startButton} onPress={onStartChallenge}>
             <Text style={styles.startButtonText}>Start your first challenge →</Text>
