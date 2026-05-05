@@ -179,7 +179,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Grace day</Text>
           <Text style={styles.cardSubtitle}>
-            A grace day lets you miss one day without obligation. Do you want one?
+            An exemption day lets you skip one day without activating your charitable donation for that day. Do you want one?
           </Text>
           <View style={styles.graceRow}>
             <TouchableOpacity
@@ -198,7 +198,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
               <Text style={[styles.graceText, graceDays === 1 && styles.graceTextSelected]}>
                 1 grace day
               </Text>
-              <Text style={styles.graceSubtext}>Miss 1 free</Text>
+              <Text style={styles.graceSubtext}>1 day exempt</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.nextButton} onPress={goNext}>
