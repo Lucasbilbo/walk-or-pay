@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native'
 import { supabase } from '../lib/supabase'
 
@@ -154,6 +155,16 @@ export default function LoginScreen() {
           </>
         )}
       </View>
+
+      <View style={styles.legalRow}>
+        <TouchableOpacity onPress={() => Linking.openURL('https://walk-or-pay.netlify.app/privacy')}>
+          <Text style={styles.legalLink}>Privacy Policy</Text>
+        </TouchableOpacity>
+        <Text style={styles.legalSep}>·</Text>
+        <TouchableOpacity onPress={() => Linking.openURL('https://walk-or-pay.netlify.app/terms')}>
+          <Text style={styles.legalLink}>Terms of Service</Text>
+        </TouchableOpacity>
+      </View>
     </KeyboardAvoidingView>
   )
 }
@@ -239,5 +250,21 @@ const styles = StyleSheet.create({
     color: '#e53e3e',
     fontSize: 13,
     textAlign: 'center',
+  },
+  legalRow: {
+    position: 'absolute',
+    bottom: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  legalLink: {
+    fontSize: 12,
+    color: '#aaa',
+    textDecorationLine: 'underline',
+  },
+  legalSep: {
+    fontSize: 12,
+    color: '#ccc',
   },
 })

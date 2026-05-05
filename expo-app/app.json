@@ -20,9 +20,6 @@
       "icon": "./assets/icon.png",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Walk or Pay reads your step count to verify your daily challenge.",
-        "NSHealthUpdateUsageDescription": "Walk or Pay needs access to your health data.",
-        "NSCameraUsageDescription": "Camera access is used to scan credit card numbers for faster payment.",
-        "NSPhotoLibraryUsageDescription": "Photo library access is not used by this app.",
         "ITSAppUsesNonExemptEncryption": false,
         "UIDeviceFamily": [1]
       }

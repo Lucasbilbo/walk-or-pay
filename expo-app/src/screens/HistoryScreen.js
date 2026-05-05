@@ -27,7 +27,7 @@ export default function HistoryScreen({ user, onBack }) {
     try {
       const { data, error: err } = await supabase
         .from('challenges')
-        .select('id,start_date,end_date,daily_goal,amount_cents,penalty_cents,status,created_at')
+        .select('id,start_date,end_date,daily_goal,amount_cents,penalty_cents,charity,status,created_at')
         .eq('user_id', user.id)
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
@@ -89,7 +89,7 @@ export default function HistoryScreen({ user, onBack }) {
                 {fullRefund ? '✓ Full refund' : 'Partial refund'}
               </Text>
               {!fullRefund && (
-                <Text style={styles.resultSub}>remainder donated to ALS</Text>
+                <Text style={styles.resultSub}>pledged to {ch.charity || 'charity'}</Text>
               )}
             </View>
           </View>

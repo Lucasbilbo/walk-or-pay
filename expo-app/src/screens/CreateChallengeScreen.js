@@ -179,7 +179,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Grace day</Text>
           <Text style={styles.cardSubtitle}>
-            A grace day lets you miss one day without penalty. Do you want one?
+            A grace day lets you miss one day without obligation. Do you want one?
           </Text>
           <View style={styles.graceRow}>
             <TouchableOpacity

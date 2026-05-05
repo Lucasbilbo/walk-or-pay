@@ -130,7 +130,7 @@ function WeekView({ challenge, dailyLogs }) {
   )
 }
 
-export default function DashboardScreen({ user, onSignOut, onStartChallenge, onProfile, onHistory }) {
+export default function DashboardScreen({ user, isReviewer, onSignOut, onStartChallenge, onProfile, onHistory }) {
   const [steps, setSteps] = useState(null)
   const [stepsLoading, setStepsLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -148,6 +148,11 @@ export default function DashboardScreen({ user, onSignOut, onStartChallenge, onP
   }, [])
 
   useEffect(() => {
+    if (isReviewer) {
+      setSteps(7500)
+      setStepsLoading(false)
+      return
+    }
     const initHealth = async () => {
       try {
         await requestAuthorization({

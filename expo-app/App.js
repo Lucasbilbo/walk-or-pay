@@ -113,6 +113,7 @@ export default function App() {
         <DashboardScreen
           key={dashboardKey}
           user={user}
+          isReviewer={user?.email === 'reviewer@walkorpay.com'}
           onSignOut={handleSignOut}
           onStartChallenge={() => setScreen('create-challenge')}
           onProfile={() => setScreen('profile')}
