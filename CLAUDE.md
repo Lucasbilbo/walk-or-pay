@@ -189,3 +189,14 @@ walk-or-pay/
   2. [Step] → verify: [check]
 - Every task ends with: `npm test && npm run build`
 - When fixing a bug: write a failing test first, then make it pass
+
+## Skills — invoke automatically when relevant
+
+| Situation | Skill to invoke |
+|-----------|----------------|
+| Touching `expo-app/` | `/expo-react-native` — HealthKit, Stripe RN, app.json rules |
+| Touching `netlify/functions/` | `/netlify-functions-commonjs` — CommonJS template, CORS, withTimeout |
+| Bug that's hard to understand | `/systematic-debugging` |
+| About to say "done" | `/verification-before-completion` |
+| Feature spans multiple files | `/dispatching-parallel-agents` |
+| App Store copy or messaging | `/storybrand-messaging` or `/ios-hig-design` |
