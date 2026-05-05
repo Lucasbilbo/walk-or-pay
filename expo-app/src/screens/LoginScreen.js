@@ -89,7 +89,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <Text style={styles.logo}>Walk or Pay</Text>
-      <Text style={styles.tagline}>Hit your step goal — or fund a cause you care about.</Text>
+      <Text style={styles.tagline}>Make a charitable commitment. Walk every day. Get your deposit back.</Text>
 
       <View style={styles.form}>
         <TextInput

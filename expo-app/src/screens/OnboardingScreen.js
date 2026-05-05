@@ -7,17 +7,17 @@ const { width } = Dimensions.get('window')
 const SLIDES = [
   {
     title: 'Walk or Pay',
-    body: 'Set a daily step goal and put money on it.',
+    body: 'Make a charitable commitment. Walk every day and keep your money.',
     emoji: '🚶',
   },
   {
-    title: 'Hit your goal, keep your money',
-    body: 'Every day you walk enough, your deposit is safe. Miss a day, and you lose a proportional share.',
+    title: 'Commit. Walk. Get it back.',
+    body: 'Deposit a refundable amount and set your daily step goal. Complete every day and your full deposit is returned to you.',
     emoji: '💰',
   },
   {
-    title: 'Your money, your motivation',
-    body: 'Miss a day and that day\'s share goes to a charity you choose. Hit every day and get it all back.',
+    title: 'You choose the cause',
+    body: 'Pick a charity upfront. If a day goes unfulfilled, that day\'s portion is donated on your behalf. Complete the challenge and nothing is donated.',
     emoji: '🏁',
   },
 ]

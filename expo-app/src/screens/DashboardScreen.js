@@ -62,11 +62,11 @@ function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) 
           <Text style={styles.summaryValue}>{completedDays} / 7</Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Days failed</Text>
+          <Text style={styles.summaryLabel}>Days unfulfilled</Text>
           <Text style={[styles.summaryValue, failedDays > 0 && styles.textDanger]}>{failedDays} / 7</Text>
         </View>
         <View style={[styles.summaryRow, styles.summaryDivider]}>
-          <Text style={styles.summaryLabel}>Amount deposited</Text>
+          <Text style={styles.summaryLabel}>Refundable deposit</Text>
           <Text style={styles.summaryValue}>{(challenge.amount_cents / 100).toFixed(2)} €</Text>
         </View>
         <View style={styles.summaryRow}>
@@ -86,8 +86,8 @@ function CompletedScreen({ challenge, dailyLogs, onSignOut, onStartChallenge }) 
       <View style={[styles.card, penaltyCents === 0 ? styles.cardSuccess : styles.cardWarning]}>
         <Text style={styles.completedMessage}>
           {penaltyCents === 0
-            ? 'Challenge completed! Your full deposit will be refunded.'
-            : `Your missed days have been pledged to ${challenge.charity || 'charity'}.`}
+            ? 'Challenge complete! Your full deposit will be returned to you.'
+            : `Your commitment is fulfilled. The unfulfilled days have been donated to ${challenge.charity || 'your chosen charity'}.`}
         </Text>
       </View>
 
@@ -496,7 +496,7 @@ export default function DashboardScreen({ user, isReviewer, onSignOut, onStartCh
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>€{dailyRisk}</Text>
-                <Text style={styles.statLabel}>Today's pledge</Text>
+                <Text style={styles.statLabel}>Daily donation</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statBox}>
@@ -529,7 +529,7 @@ export default function DashboardScreen({ user, isReviewer, onSignOut, onStartCh
         <View style={styles.card}>
           <Text style={styles.cardLabel}>NO ACTIVE CHALLENGE</Text>
           <Text style={styles.noChallenge}>
-            Commit to your goal — if you miss a day, your pledge goes to a charity you choose. Hit every day and get it all back.
+            Make a charitable commitment. Deposit a refundable amount, set a step goal, and complete 7 days to get your full deposit back.
           </Text>
           <TouchableOpacity style={styles.startButton} onPress={onStartChallenge}>
             <Text style={styles.startButtonText}>Start your first challenge →</Text>

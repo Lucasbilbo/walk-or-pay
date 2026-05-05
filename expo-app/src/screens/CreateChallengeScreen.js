@@ -123,11 +123,11 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
         </View>
       )}
 
-      {/* Step 2 — Stake */}
+      {/* Step 2 — Pledge */}
       {step === 2 && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Stake amount</Text>
-          <Text style={styles.cardSubtitle}>How much do you want to put on the line?</Text>
+          <Text style={styles.cardTitle}>Charitable pledge</Text>
+          <Text style={styles.cardSubtitle}>How much would you like to pledge? Complete all 7 days and your full deposit is returned.</Text>
           <View style={styles.optionsGrid}>
             {AMOUNT_OPTIONS.map(opt => (
               <TouchableOpacity
@@ -141,7 +141,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.selectedValue}>€{amountEuros} at stake for 7 days</Text>
+          <Text style={styles.selectedValue}>€{amountEuros} refundable deposit</Text>
           <TouchableOpacity style={styles.nextButton} onPress={goNext}>
             <Text style={styles.nextButtonText}>Continue →</Text>
           </TouchableOpacity>
@@ -153,7 +153,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Choose your charity</Text>
           <Text style={styles.cardSubtitle}>
-            If you miss a day, your pledge goes here. Hit every day and get it all back.
+            Choose the charity that receives your donation on any unfulfilled day. Complete every day and nothing is donated.
           </Text>
           <View style={styles.charityList}>
             {CHARITY_OPTIONS.map(opt => (
@@ -221,11 +221,11 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
             <Text style={styles.summaryValue}>7 days</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Daily pledge if missed</Text>
+            <Text style={styles.summaryLabel}>Daily charitable donation</Text>
             <Text style={styles.summaryValue}>€{(amountEuros / 7).toFixed(2)}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Missed day pledge goes to</Text>
+            <Text style={styles.summaryLabel}>Donation goes to</Text>
             <Text style={[styles.summaryValue, { maxWidth: 180, textAlign: 'right' }]}>{charity}</Text>
           </View>
           <View style={styles.summaryRow}>
@@ -237,7 +237,7 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
             <Text style={styles.summaryValue}>€1.00</Text>
           </View>
           <View style={[styles.summaryRow, styles.summaryTotal]}>
-            <Text style={styles.summaryLabelBold}>Total charge</Text>
+            <Text style={styles.summaryLabelBold}>Refundable deposit</Text>
             <Text style={styles.summaryValueBold}>€{amountEuros + 1}.00</Text>
           </View>
 
@@ -261,12 +261,12 @@ export default function CreateChallengeScreen({ onBack, onSuccess }) {
           >
             {loading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.payButtonText}>{`Pay €${amountEuros + 1} & Start Challenge`}</Text>
+              : <Text style={styles.payButtonText}>{`Commit €${amountEuros + 1} & Start`}</Text>
             }
           </TouchableOpacity>
 
           <Text style={styles.disclaimer}>
-            Hit your goal every day and get your full deposit back. Miss a day and that day's share goes to {charity}.
+            Complete all 7 days and your full deposit is returned. Any unfulfilled day's portion is donated to {charity} on your behalf.
           </Text>
         </View>
       )}
