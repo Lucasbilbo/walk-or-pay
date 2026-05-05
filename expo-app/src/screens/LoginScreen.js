@@ -133,8 +133,11 @@ export default function LoginScreen() {
                 : <Text style={styles.buttonText}>Sign In</Text>
               }
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => { setUsePassword(false); setPasswordError('') }} style={styles.link}>
-              <Text style={styles.linkText}>Sign in with magic link instead</Text>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => { setUsePassword(false); setPasswordError('') }}
+            >
+              <Text style={styles.secondaryButtonText}>Use magic link instead</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -149,8 +152,11 @@ export default function LoginScreen() {
                 : <Text style={styles.buttonText}>Send magic link</Text>
               }
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setUsePassword(true)} style={styles.link}>
-              <Text style={styles.linkText}>Sign in with password instead</Text>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => setUsePassword(true)}
+            >
+              <Text style={styles.secondaryButtonText}>Sign in with password</Text>
             </TouchableOpacity>
           </>
         )}
@@ -237,14 +243,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  link: {
-    marginTop: 4,
+  secondaryButton: {
+    borderWidth: 1.5,
+    borderColor: '#d0d0d0',
+    borderRadius: 10,
+    padding: 14,
     alignItems: 'center',
   },
-  linkText: {
-    color: '#888',
-    fontSize: 14,
-    textDecorationLine: 'underline',
+  secondaryButtonText: {
+    color: '#555',
+    fontSize: 15,
+    fontWeight: '500',
   },
   errorText: {
     color: '#e53e3e',
