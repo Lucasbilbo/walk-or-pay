@@ -20,6 +20,7 @@
       "icon": "./assets/icon.png",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Walk or Pay reads your step count to verify your daily challenge.",
+        "NSCameraUsageDescription": "Camera access is not used by this app.",
         "ITSAppUsesNonExemptEncryption": false,
         "UIDeviceFamily": [1]
       }
