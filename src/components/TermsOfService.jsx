@@ -5,24 +5,24 @@ export default function TermsOfService() {
         <a href="/" style={s.back}>← Back to Walk or Pay</a>
 
         <h1 style={s.title}>Terms of Service</h1>
-        <p style={s.updated}>Last updated: April 2025</p>
+        <p style={s.updated}>Last updated: May 2025</p>
 
         <h2 style={s.h2}>What is Walk or Pay?</h2>
-        <p style={s.p}>Walk or Pay is a physical activity commitment service. You set a daily step goal, deposit money, and get it back if you meet your goal each day. Missing a day costs you a proportional fraction of your deposit.</p>
+        <p style={s.p}>Walk or Pay is a charitable commitment service. You choose a charity, set a daily step goal, and make an upfront donation. Complete your goal every day and receive a full refund. Miss days and your donation stays with your chosen charity.</p>
 
         <div style={s.highlight}>
           <p style={{ ...s.p, marginBottom: 0 }}>Walk or Pay is <strong>not gambling</strong>. The outcome depends entirely on your own behaviour. There are no bets against other participants.</p>
         </div>
 
-        <h2 style={s.h2}>Your deposit</h2>
-        <p style={s.p}>Your deposit is yours — you get it back proportionally based on the days you complete. The penalty is calculated as:</p>
+        <h2 style={s.h2}>Your donation</h2>
+        <p style={s.p}>Your donation goes to your chosen charity from day one. If you complete your step goal every day during the 7-day challenge, you receive a full refund. If you miss days, the corresponding portion of your donation remains with the charity. The refund is calculated as:</p>
         <p style={{ ...s.p, fontFamily: 'monospace', background: 'var(--color-bg-secondary, #f5f5f5)', padding: '8px 12px', borderRadius: 6 }}>
-          penalty = (failed_days / 7) × deposit
+          refund = ((7 - missed_days) / 7) × donation
         </p>
-        <p style={s.p}>Failed days are days where your recorded steps did not reach your goal and no grace day was applied. The refund is your original deposit minus the penalty, never less than zero.</p>
+        <p style={s.p}>Missed days are days where your recorded steps did not reach your goal and no grace day was applied.</p>
 
-        <h2 style={s.h2}>Penalty donations</h2>
-        <p style={s.p}>Penalty money is donated to charitable causes. It is never kept as profit by Walk or Pay.</p>
+        <h2 style={s.h2}>Where your donation goes</h2>
+        <p style={s.p}>Your donation goes to the charity you selected when creating your challenge. Walk or Pay never retains donated funds as profit.</p>
 
         <h2 style={s.h2}>This is not gambling</h2>
         <p style={s.p}>Walk or Pay is a commitment deposit mechanism. The result depends solely on whether you meet your step goal — a measurable physical activity you control. It is not subject to chance.</p>
@@ -34,7 +34,7 @@ export default function TermsOfService() {
         <p style={s.p}>You must be 18 years of age or older to use Walk or Pay.</p>
 
         <h2 style={s.h2}>Data integrity</h2>
-        <p style={s.p}>We reserve the right to close a challenge and withhold the refund if we detect manipulation of step data or any attempt to circumvent the challenge rules.</p>
+        <p style={s.p}>We reserve the right to close a challenge and forfeit the refund eligibility if we detect manipulation of step data or any attempt to circumvent the challenge rules.</p>
 
         <h2 style={s.h2}>Contact</h2>
         <p style={s.p}><a href="mailto:hello@walkorpay.com" style={s.link}>hello@walkorpay.com</a></p>
