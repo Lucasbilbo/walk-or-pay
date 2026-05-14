@@ -39,7 +39,7 @@ function StepStake({ stake, onChange, welcomeBonusUsed, onNext, onBack }) {
 
   return (
     <div>
-      <h2 style={s.title}>How much do you want to put at stake?</h2>
+      <h2 style={s.title}>How much do you want to commit to charity?</h2>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '24px 0' }}>
         <span style={{ fontSize: 28, color: 'var(--color-text-secondary)' }}>$</span>
         <input
@@ -54,18 +54,13 @@ function StepStake({ stake, onChange, welcomeBonusUsed, onNext, onBack }) {
       {!welcomeBonusUsed && (
         <div style={s.bonusBox}>
           <div style={{ fontWeight: 700, marginBottom: 6 }}>
-            🎁 First challenge bonus: we'll double your stake to {fmt(effectiveCents)}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-            If you win, you get back {fmt(amountCents)} (your deposit).
-            If you miss a day, you lose {fmt(perDayCents)} (from the doubled amount).
+            🎁 First challenge bonus: we'll match your donation up to {fmt(effectiveCents)}
           </div>
         </div>
       )}
 
-      <div style={{ fontSize: 14, textAlign: 'center', margin: '16px 0' }}>
-        <span style={{ color: 'var(--color-text-secondary)' }}>Daily pledge if missed: </span>
-        <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>{fmt(perDayCents)}</span>
+      <div style={{ fontSize: 14, textAlign: 'center', margin: '16px 0', color: 'var(--color-text-secondary)' }}>
+        Hit every day → full refund. Miss days → your donation stays.
       </div>
 
       {stake > 0 && !valid && (
@@ -94,9 +89,9 @@ const CHARITIES = [
 function StepCharity({ charity, onChange, onNext, onBack }) {
   return (
     <div>
-      <h2 style={s.title}>Where should missed-day pledges go?</h2>
+      <h2 style={s.title}>Who receives your donation?</h2>
       <p style={{ color: 'var(--color-text-secondary)', fontSize: 14, marginBottom: 20 }}>
-        If you miss a day, your pledge goes to this charity.
+        Your full amount is donated today. Complete your goal and we refund it.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
         {CHARITIES.map(opt => (
@@ -206,19 +201,18 @@ function StepPayInner({ goal, stake, graceDays, charity, welcomeBonusUsed, onBac
 
   return (
     <div>
-      <h2 style={s.title}>Ready to commit?</h2>
+      <h2 style={s.title}>You're donating to {charity}</h2>
       <div className="card" style={{ marginBottom: 20 }}>
         {[
           { label: 'Duration', value: '7-day challenge starting today' },
           { label: 'Daily goal', value: `${goal.toLocaleString()} steps` },
-          { label: 'Your deposit', value: `$${stake.toFixed(2)}` },
+          { label: 'Your donation', value: `$${stake.toFixed(2)}` },
           {
-            label: 'At stake',
+            label: 'Refund if you complete all 7 days',
             value: welcomeBonusUsed ? `$${stake.toFixed(2)}` : `${fmt(effectiveCents)} (2x bonus!)`,
             highlight: !welcomeBonusUsed,
           },
-          { label: 'Daily pledge if missed', value: fmt(perDayCents), danger: true },
-          { label: 'Missed day pledge goes to', value: charity },
+          { label: 'Charity if you miss days', value: charity },
           { label: 'Grace days', value: `${graceDays}` },
         ].map(row => (
           <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
@@ -243,7 +237,7 @@ function StepPayInner({ goal, stake, graceDays, charity, welcomeBonusUsed, onBac
       <div style={s.btnRow}>
         <button type="button" className="btn" onClick={onBack} disabled={loading} style={s.backBtn}>← Back</button>
         <button type="button" className="btn btn-primary" onClick={handlePay} disabled={loading || !stripe} style={{ flex: 1, padding: '14px' }}>
-          {loading ? 'Processing…' : `Start Challenge — Pay $${stake.toFixed(2)}`}
+          {loading ? 'Processing…' : `Donate & Start Challenge — $${stake.toFixed(2)}`}
         </button>
       </div>
     </div>

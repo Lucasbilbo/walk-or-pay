@@ -41,7 +41,9 @@ function EmptyState({ profile, onStartChallenge }) {
       <div style={{ fontSize: 64, marginBottom: 16 }}>🚶</div>
       <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 12 }}>No active challenge</h2>
       <p style={{ color: 'var(--color-text-secondary)', marginBottom: 28, fontSize: 15, lineHeight: 1.6 }}>
-        Commit to your goal — if you miss a day, your pledge goes to a charity you choose. Hit every day and get it all back.
+        Choose a charity, set your step goal, and donate.
+        Hit your goal every day and get a full refund.
+        Miss a day and your donation stays with the cause.
       </p>
       {profile?.welcome_bonus_used === false && (
         <div style={bonusStyle}>🎁 2x bonus on your first challenge!</div>
@@ -51,7 +53,7 @@ function EmptyState({ profile, onStartChallenge }) {
         onClick={onStartChallenge}
         style={{ padding: '14px 36px', fontSize: 16 }}
       >
-        Start your first challenge
+        Start your challenge
       </button>
     </div>
   )
@@ -66,7 +68,9 @@ function CompletedSummary({ challenge, dailyLogs, onStartChallenge }) {
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 16px 40px' }}>
       <div className="card" style={{ marginBottom: 12, textAlign: 'center' }}>
         <div style={{ fontSize: 48, marginBottom: 12 }}>🏁</div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Challenge complete!</h2>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
+          {penaltyCents === 0 ? 'You earned your full refund! 🎉' : 'Challenge complete'}
+        </h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>
           Week of {challenge.start_date} – {challenge.end_date}
         </p>
@@ -82,11 +86,11 @@ function CompletedSummary({ challenge, dailyLogs, onStartChallenge }) {
             <div style={{ fontSize: 28, fontWeight: 800, color: penaltyCents > 0 ? 'var(--color-danger)' : 'var(--color-text)' }}>
               {eur(penaltyCents)}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Pledged to {challenge.charity || 'charity'}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Donated to {challenge.charity || 'charity'}</div>
           </div>
           <div>
             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-primary)' }}>{eur(refundCents)}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Refunded</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Your refund</div>
           </div>
         </div>
       </div>
@@ -370,7 +374,7 @@ export default function Dashboard({ user, profile, onStartChallenge }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, textAlign: 'center' }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 700 }}>{eur(challenge.effective_amount_cents)}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>At stake</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Your donation</div>
           </div>
           <div>
             <div style={{
@@ -379,11 +383,11 @@ export default function Dashboard({ user, profile, onStartChallenge }) {
             }}>
               {eur(moneyLostCents)}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Pledged so far</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Donated so far</div>
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-warning)' }}>{eur(dailyRiskCents)}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Today's pledge</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Today's refund at risk</div>
           </div>
         </div>
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--color-border)', fontSize: 12, color: 'var(--color-text-secondary)' }}>

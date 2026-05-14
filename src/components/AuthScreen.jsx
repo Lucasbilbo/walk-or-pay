@@ -46,7 +46,7 @@ export default function AuthScreen({ onSignIn, onSignInWithPassword }) {
     <div style={s.outer}>
       <div className="card" style={s.card}>
         <h1 style={s.logo}>Walk or Pay</h1>
-        <p style={s.tagline}>Hit your step goal — or fund a cause you care about.</p>
+        <p style={s.tagline}>Donate to charity. Hit your steps. Get it back.</p>
         <form onSubmit={handleSubmit} style={s.form}>
           <input
             type="email"
